@@ -1,5 +1,5 @@
-import Component from "../login"
+import Login from "../login"
 
 export default function Page() {
-  return <Component />
+  return <Login />
 }

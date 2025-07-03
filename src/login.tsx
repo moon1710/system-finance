@@ -1,279 +1,176 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { User, Shield, ArrowRight, Sparkles } from "lucide-react"
+import { useState } from "react"
+import { motion, AnimatePresence } from "framer-motion"
+import { User, Shield, Mail, KeyRound } from "lucide-react"
 
-export default function Component() {
-    const [isAdmin, setIsAdmin] = useState(false)
+// ============================================================================
+// Componente 1: Fondo Animado (Separado para limpieza)
+// ============================================================================
+const PastelAuroraBackground = () => (
+    <div className="relative hidden h-full w-full items-center justify-center overflow-hidden bg-gradient-to-br from-rose-100 to-teal-100 lg:flex">
+        {[
+            { class: "bg-purple-300/50", size: "w-96 h-96", pos: { top: "-20%", left: "-10%" }, dur: 25 },
+            { class: "bg-sky-300/50", size: "w-80 h-80", pos: { bottom: "-15%", right: "-10%" }, dur: 28 },
+            { class: "bg-rose-300/40", size: "w-72 h-72", pos: { top: "25%", right: "15%" }, dur: 32 },
+        ].map((orb, i) => (
+            <motion.div
+                key={i}
+                initial={{ scale: 0.8, opacity: 0.5, rotate: Math.random() * 90 }}
+                animate={{
+                    scale: [0.9, 1, 0.9],
+                    x: `calc(${orb.pos.left || orb.pos.right} + ${Math.random() * 40 - 20}px)`,
+                    y: `calc(${orb.pos.top || orb.pos.bottom} + ${Math.random() * 40 - 20}px)`,
+                    rotate: 360,
+                }}
+                transition={{ duration: orb.dur, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }}
+                className={`absolute rounded-full mix-blend-multiply filter blur-3xl ${orb.size} ${orb.class}`}
+            />
+        ))}
+        <div className="z-10 text-center select-none space-y-4 rounded-xl bg-white/30 p-8 shadow-lg backdrop-blur-md">
+            <h1 className="text-4xl font-bold tracking-tight text-slate-800">
+                Plataforma Creativa
+            </h1>
+            <p className="max-w-sm text-lg text-slate-600">
+                Donde la inspiración y la gestión se encuentran.
+            </p>
+        </div>
+    </div>
+)
+
+// ============================================================================
+// Componente 2: Formulario de Login (Separado para lógica)
+// ============================================================================
+const LoginForm = () => {
+    const [role, setRole] = useState<'artist' | 'admin'>('artist')
     const [isLoading, setIsLoading] = useState(false)
-    const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
 
-    useEffect(() => {
-        const handleMouseMove = (e: MouseEvent) => {
-            setMousePosition({ x: e.clientX, y: e.clientY })
-        }
-        window.addEventListener("mousemove", handleMouseMove)
-        return () => window.removeEventListener("mousemove", handleMouseMove)
-    }, [])
-
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
         setIsLoading(true)
-        // Simulate login process
         setTimeout(() => setIsLoading(false), 2000)
     }
 
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: { opacity: 1, transition: { staggerChildren: 0.15, delayChildren: 0.2 } },
+    }
+
+    const itemVariants = {
+        hidden: { y: 20, opacity: 0 },
+        visible: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 100 } },
+    }
+
     return (
-        <div className="h-screen bg-gray-50 flex overflow-hidden relative" style={{ perspective: "1000px" }}>
-            {/* Dynamic background elements */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div
-                    className="absolute w-96 h-96 bg-gradient-to-r from-gray-200/20 to-gray-300/20 rounded-full blur-3xl transition-all duration-1000"
-                    style={{
-                        left: mousePosition.x * 0.02,
-                        top: mousePosition.y * 0.02,
-                    }}
-                />
-                <div
-                    className="absolute w-64 h-64 bg-gradient-to-r from-gray-400/10 to-gray-500/10 rounded-full blur-2xl transition-all duration-700"
-                    style={{
-                        right: mousePosition.x * -0.01,
-                        bottom: mousePosition.y * -0.01,
-                    }}
-                />
-            </div>
+        <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            className="w-full max-w-md rounded-2xl bg-white/80 p-8 shadow-2xl backdrop-blur-xl"
+        >
+            <AnimatePresence mode="wait">
+                <motion.div
+                    key={role}
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    transition={{ duration: 0.2 }}
+                    className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br text-white shadow-lg from-rose-300 to-sky-300"
+                >
+                    {role === 'artist' ? <User size={32} /> : <Shield size={32} />}
+                </motion.div>
+            </AnimatePresence>
 
-            {/* Left side - Enhanced 3D elements */}
-            <div className="hidden lg:flex lg:w-1/2 relative bg-white overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-gray-900 to-black" />
+            <motion.h2 className="mt-6 text-center text-2xl font-bold tracking-tight text-slate-800">
+                {role === 'artist' ? 'Portal del Artista' : 'Acceso de Admin'}
+            </motion.h2>
 
-                {/* Dynamic 3D Geometric elements */}
-                <div className="absolute inset-0 flex items-center justify-center" style={{ perspective: "800px" }}>
-                    <div
-                        className="relative transform-gpu transition-all duration-1000 hover:rotateY-12 hover:rotateX-6"
-                        style={{
-                            transform: `rotateY(${mousePosition.x * 0.01}deg) rotateX(${mousePosition.y * 0.01}deg)`,
-                        }}
+            <div className="mt-8 flex rounded-full bg-slate-200/70 p-1">
+                {['artist', 'admin'].map((r) => (
+                    <button
+                        key={r}
+                        onClick={() => setRole(r as 'artist' | 'admin')}
+                        className="relative w-1/2 rounded-full py-2 text-sm font-semibold capitalize text-slate-700 transition-colors focus:outline-none"
                     >
-                        {/* Main 3D circular element with glass effect */}
-                        <div
-                            className="w-80 h-80 border border-gray-600/50 rounded-full flex items-center justify-center shadow-2xl transform-gpu transition-all duration-500 hover:shadow-gray-900/50 hover:scale-105 backdrop-blur-sm"
-                            style={{
-                                transformStyle: "preserve-3d",
-                                boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.8), inset 0 0 0 1px rgba(255, 255, 255, 0.1)",
-                                background: "rgba(255, 255, 255, 0.02)",
-                            }}
-                        >
-                            <div
-                                className="w-60 h-60 border border-gray-500/50 rounded-full flex items-center justify-center shadow-xl transform-gpu transition-all duration-300 hover:translateZ-4 backdrop-blur-sm"
-                                style={{
-                                    transformStyle: "preserve-3d",
-                                    boxShadow: "0 20px 40px -8px rgba(0, 0, 0, 0.6)",
-                                    background: "rgba(255, 255, 255, 0.03)",
-                                }}
-                            >
-                                <div
-                                    className="w-40 h-40 bg-white/95 backdrop-blur-md rounded-full flex items-center justify-center shadow-lg transform-gpu transition-all duration-200 hover:translateZ-8 hover:rotateY-180"
-                                    style={{
-                                        transformStyle: "preserve-3d",
-                                        boxShadow: "0 15px 30px -6px rgba(0, 0, 0, 0.4)",
-                                    }}
-                                >
-                                    <div className="w-20 h-20 bg-gray-900 rounded-full shadow-inner relative overflow-hidden">
-                                        <div className="absolute inset-0 bg-gradient-to-br from-gray-700 to-gray-900 animate-pulse"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Dynamic orbital dots */}
-                        {[0, 90, 180, 270].map((angle, index) => (
-                            <div
-                                key={angle}
-                                className="absolute w-4 h-4 rounded-full shadow-lg transition-all duration-500 cursor-pointer backdrop-blur-sm"
-                                style={{
-                                    left: "50%",
-                                    top: "50%",
-                                    transform: `translate(-50%, -50%) rotate(${angle + mousePosition.x * 0.1}deg) translateY(-160px) scale(${1 + Math.sin(Date.now() * 0.001 + index) * 0.2})`,
-                                    background: index % 2 === 0 ? "rgba(255, 255, 255, 0.9)" : "rgba(156, 163, 175, 0.8)",
-                                    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.2)",
-                                }}
+                        {role === r && (
+                            <motion.div
+                                layoutId="active-pill"
+                                transition={{ type: "spring", stiffness: 380, damping: 35 }}
+                                className="absolute inset-0 z-0 rounded-full bg-white shadow-md"
                             />
-                        ))}
-                    </div>
-                </div>
-
-                {/* Floating glass elements */}
-                <div
-                    className="absolute top-20 left-20 w-16 h-16 bg-white/10 backdrop-blur-md rounded-xl shadow-2xl transform-gpu transition-all duration-1000 hover:rotateX-45 hover:rotateY-45 hover:translateZ-8 border border-white/20"
-                    style={{
-                        transform: `translateY(${Math.sin(Date.now() * 0.001) * 10}px)`,
-                    }}
-                />
-                <div
-                    className="absolute bottom-32 right-16 w-12 h-12 bg-gray-800/20 backdrop-blur-md rounded-full shadow-xl transform-gpu transition-all duration-700 hover:rotateZ-180 hover:scale-125 border border-white/10"
-                    style={{
-                        transform: `translateX(${Math.cos(Date.now() * 0.0015) * 15}px)`,
-                    }}
-                />
-
-                {/* Enhanced bottom text */}
-                <div className="absolute bottom-12 left-12 text-white transform-gpu transition-all duration-500 hover:translateX-2 hover:translateZ-4">
-                    <div className="flex items-center space-x-2 mb-2">
-                        <Sparkles className="w-5 h-5 text-gray-400 animate-pulse" />
-                        <h1 className="text-3xl font-light drop-shadow-lg">Creative Platform</h1>
-                    </div>
-                    <p className="text-gray-400 text-sm drop-shadow-md">Professional workspace management</p>
-                </div>
+                        )}
+                        <span className="relative z-10">{r}</span>
+                    </button>
+                ))}
             </div>
 
-            {/* Right side - Glass morphism login form */}
-            <div className="w-full lg:w-1/2 flex items-center justify-center p-4 sm:p-6 lg:p-8 bg-gray-50 min-h-screen overflow-y-auto">
-                <div className="w-full max-w-md">
-                    {/* Main glass login card */}
-                    <div
-                        className="backdrop-blur-xl bg-white/80 border border-white/20 rounded-2xl p-6 sm:p-8 transform-gpu transition-all duration-500 hover:translateY-2 hover:rotateX-2 cursor-pointer relative overflow-hidden"
-                        style={{
-                            transformStyle: "preserve-3d",
-                            boxShadow:
-                                "0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2)",
-                        }}
-                    >
-                        {/* Glass reflection effect */}
-                        <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent pointer-events-none rounded-2xl" />
+            <motion.form
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                onSubmit={handleSubmit}
+                className="mt-8 space-y-6"
+            >
+                <motion.div variants={itemVariants} className="relative">
+                    <Mail className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                    <input
+                        type="email"
+                        required
+                        placeholder="correo@ejemplo.com"
+                        className="w-full rounded-full border border-slate-300 bg-white/80 py-3 pl-12 pr-4 text-slate-800 placeholder:text-slate-400 transition-shadow focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-300/50"
+                    />
+                </motion.div>
 
-                        {/* Header with enhanced 3D icon */}
-                        <div className="text-center mb-6 sm:mb-8 relative z-10">
-                            <div
-                                className="inline-flex items-center justify-center w-12 h-12 bg-gray-900/90 backdrop-blur-sm rounded-xl mb-4 shadow-lg transform-gpu transition-all duration-300 hover:rotateY-180 hover:scale-110 border border-white/10"
-                                style={{ transformStyle: "preserve-3d" }}
-                            >
-                                {isAdmin ? <Shield className="w-6 h-6 text-white" /> : <User className="w-6 h-6 text-white" />}
-                            </div>
-                            <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-2">
-                                {isAdmin ? "Admin Access" : "Artist Portal"}
-                            </h2>
-                            <p className="text-gray-600 text-sm">
-                                {isAdmin ? "Administrative dashboard login" : "Access your creative workspace"}
-                            </p>
-                        </div>
-
-                        {/* Enhanced 3D toggle */}
-                        <div className="flex items-center justify-center mb-6 sm:mb-8 relative z-10">
-                            <div
-                                className="flex items-center space-x-4 bg-gray-100/50 backdrop-blur-sm rounded-full p-1 border border-white/30 shadow-inner transform-gpu transition-all duration-300 hover:shadow-lg"
-                                style={{ transformStyle: "preserve-3d" }}
-                            >
-                                <button
-                                    type="button"
-                                    onClick={() => setIsAdmin(false)}
-                                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 transform-gpu hover:translateZ-2 ${!isAdmin
-                                        ? "bg-white/90 backdrop-blur-sm text-gray-900 shadow-lg hover:shadow-xl border border-white/20"
-                                        : "text-gray-600 hover:text-gray-800 hover:bg-white/30"
-                                        }`}
-                                >
-                                    Artist
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setIsAdmin(true)}
-                                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 transform-gpu hover:translateZ-2 ${isAdmin
-                                        ? "bg-white/90 backdrop-blur-sm text-gray-900 shadow-lg hover:shadow-xl border border-white/20"
-                                        : "text-gray-600 hover:text-gray-800 hover:bg-white/30"
-                                        }`}
-                                >
-                                    Admin
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Dynamic form container */}
-                        <div
-                            className="relative z-10 transition-all duration-500 ease-in-out"
-                            style={{
-                                minHeight: isAdmin ? "140px" : "70px",
-                            }}
+                <AnimatePresence>
+                    {role === 'admin' && (
+                        <motion.div
+                            variants={itemVariants}
+                            initial="hidden"
+                            animate="visible"
+                            exit={{ opacity: 0, height: 0, y: -10, transition: { duration: 0.3 } }}
+                            className="relative"
                         >
-                            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-                                <div className="space-y-4">
-                                    {isAdmin ? (
-                                        // Admin form with glass inputs
-                                        <>
-                                            <div className="space-y-2 transform transition-all duration-300">
-                                                <Label htmlFor="username" className="text-gray-700 text-sm font-medium">
-                                                    Username
-                                                </Label>
-                                                <Input
-                                                    id="username"
-                                                    type="text"
-                                                    placeholder="Enter username"
-                                                    className="bg-white/50 backdrop-blur-sm border-white/30 text-gray-900 placeholder:text-gray-500 focus:border-gray-900 focus:ring-gray-900/10 rounded-xl h-12 shadow-sm transform-gpu transition-all duration-300 hover:shadow-md hover:translateY-1 focus:translateY-1 focus:shadow-lg focus:bg-white/70"
-                                                    required
-                                                />
-                                            </div>
-                                            <div className="space-y-2 transform transition-all duration-300">
-                                                <Label htmlFor="password" className="text-gray-700 text-sm font-medium">
-                                                    Password
-                                                </Label>
-                                                <Input
-                                                    id="password"
-                                                    type="password"
-                                                    placeholder="Enter password"
-                                                    className="bg-white/50 backdrop-blur-sm border-white/30 text-gray-900 placeholder:text-gray-500 focus:border-gray-900 focus:ring-gray-900/10 rounded-xl h-12 shadow-sm transform-gpu transition-all duration-300 hover:shadow-md hover:translateY-1 focus:translateY-1 focus:shadow-lg focus:bg-white/70"
-                                                    required
-                                                />
-                                            </div>
-                                        </>
-                                    ) : (
-                                        // Artist form with glass input
-                                        <div className="space-y-2 transform transition-all duration-300">
-                                            <Label htmlFor="artistId" className="text-gray-700 text-sm font-medium">
-                                                Artist ID
-                                            </Label>
-                                            <Input
-                                                id="artistId"
-                                                type="text"
-                                                placeholder="Enter your artist ID"
-                                                className="bg-white/50 backdrop-blur-sm border-white/30 text-gray-900 placeholder:text-gray-500 focus:border-gray-900 focus:ring-gray-900/10 rounded-xl h-12 shadow-sm transform-gpu transition-all duration-300 hover:shadow-md hover:translateY-1 focus:translateY-1 focus:shadow-lg focus:bg-white/70"
-                                                required
-                                            />
-                                        </div>
-                                    )}
-                                </div>
+                            <KeyRound className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                            <input
+                                type="password"
+                                required
+                                placeholder="Contraseña"
+                                className="w-full rounded-full border border-slate-300 bg-white/80 py-3 pl-12 pr-4 text-slate-800 placeholder:text-slate-400 transition-shadow focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-300/50"
+                            />
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
-                                {/* Enhanced 3D submit button */}
-                                <Button
-                                    type="submit"
-                                    disabled={isLoading}
-                                    className="w-full bg-gray-900/90 backdrop-blur-sm hover:bg-gray-800/90 text-white font-medium py-3 rounded-xl h-12 shadow-lg transform-gpu transition-all duration-300 hover:shadow-xl hover:translateY-1 hover:scale-105 active:translateY-0 active:scale-100 border border-white/10"
-                                >
-                                    {isLoading ? (
-                                        <div className="flex items-center justify-center space-x-2">
-                                            <div className="w-4 h-4 border-2 border-gray-300 border-t-white rounded-full animate-spin" />
-                                            <span>Signing in...</span>
-                                        </div>
-                                    ) : (
-                                        <div className="flex items-center justify-center space-x-2">
-                                            <span>Sign In</span>
-                                            <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translateX-1" />
-                                        </div>
-                                    )}
-                                </Button>
-                            </form>
-                        </div>
+                <motion.div variants={itemVariants}>
+                    <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        type="submit"
+                        disabled={isLoading}
+                        className="w-full rounded-full bg-gradient-to-r from-violet-500 to-sky-500 py-3 font-semibold text-white shadow-lg transition-transform hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-violet-400 focus:ring-offset-2 disabled:opacity-60"
+                    >
+                        {isLoading ? 'Verificando...' : (role === 'artist' ? 'Enviar Enlace Mágico' : 'Iniciar Sesión')}
+                    </motion.button>
+                </motion.div>
+            </motion.form>
+        </motion.div>
+    )
+}
 
-                        {/* Footer */}
-                        <div className="mt-6 sm:mt-8 text-center relative z-10">
-                            {/* Aquí poner la redirección a mail */}
-                            <p className="text-gray-500 text-sm">Necesita asistencia? Puedes contactarnos</p>
-                        </div>
-                    </div>
+// ============================================================================
+// Componente Principal de la Página (Ensamblador)
+// ============================================================================
+export default function PolishedLoginPage() {
+    return (
+        <main className="min-h-screen font-sans antialiased">
+            <div className="lg:grid lg:grid-cols-2">
+                <PastelAuroraBackground />
+                <div className="relative flex min-h-screen items-center justify-center bg-slate-100 p-4 lg:bg-transparent">
+                    <div className="absolute inset-0 bg-gradient-to-br from-rose-100 to-teal-100 lg:hidden" />
+                    <LoginForm />
                 </div>
             </div>
-        </div>
+        </main>
     )
 }
