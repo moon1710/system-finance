@@ -3,45 +3,49 @@
 import type React from "react"
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { User, Shield, Mail, KeyRound } from "lucide-react"
+import { User, Shield, Mail, KeyRound, Sparkles } from "lucide-react"
 
-// ============================================================================
-// Componente 1: Fondo Animado (Separado para limpieza)
-// ============================================================================
 const PastelAuroraBackground = () => (
-    <div className="relative hidden h-full w-full items-center justify-center overflow-hidden bg-gradient-to-br from-rose-100 to-teal-100 lg:flex">
+    <div className="relative hidden h-full w-full items-center justify-center overflow-hidden bg-gradient-to-br from-blue-200 via-sky-200 to-indigo-300 lg:flex">
         {[
-            { class: "bg-purple-300/50", size: "w-96 h-96", pos: { top: "-20%", left: "-10%" }, dur: 25 },
-            { class: "bg-sky-300/50", size: "w-80 h-80", pos: { bottom: "-15%", right: "-10%" }, dur: 28 },
-            { class: "bg-rose-300/40", size: "w-72 h-72", pos: { top: "25%", right: "15%" }, dur: 32 },
+            { class: "bg-indigo-300/50", size: "w-96 h-96", pos: { top: "-20%", left: "-10%" }, dur: 25 },
+            { class: "bg-sky-300/40", size: "w-80 h-80", pos: { bottom: "-15%", right: "-10%" }, dur: 28 },
+            { class: "bg-blue-200/40", size: "w-72 h-72", pos: { top: "25%", right: "15%" }, dur: 32 },
         ].map((orb, i) => (
             <motion.div
                 key={i}
                 initial={{ scale: 0.8, opacity: 0.5, rotate: Math.random() * 90 }}
                 animate={{
                     scale: [0.9, 1, 0.9],
-                    x: `calc(${orb.pos.left || orb.pos.right} + ${Math.random() * 40 - 20}px)`,
-                    y: `calc(${orb.pos.top || orb.pos.bottom} + ${Math.random() * 40 - 20}px)`,
+                    x: [0, 20, -20, 0],
+                    y: [0, -20, 20, 0],
                     rotate: 360,
                 }}
-                transition={{ duration: orb.dur, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }}
+                transition={{ duration: orb.dur, repeat: Infinity, repeatType: "loop", ease: "easeInOut" }}
                 className={`absolute rounded-full mix-blend-multiply filter blur-3xl ${orb.size} ${orb.class}`}
             />
         ))}
-        <div className="z-10 text-center select-none space-y-4 rounded-xl bg-white/30 p-8 shadow-lg backdrop-blur-md">
-            <h1 className="text-4xl font-bold tracking-tight text-slate-800">
-                Plataforma Creativa
+
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, ease: "easeOut" }}
+            className="z-10 text-center select-none space-y-4 rounded-3xl bg-white/30 p-10 shadow-xl backdrop-blur-2xl border border-white/30 max-w-sm"
+        >
+            <Sparkles className="mx-auto text-indigo-500" size={32} />
+            <h1 className="text-4xl font-extrabold tracking-tight text-slate-800 drop-shadow-md">
+                Plataforma de Pagos
             </h1>
-            <p className="max-w-sm text-lg text-slate-600">
-                Donde la inspiración y la gestión se encuentran.
+            <p className="text-lg text-slate-700 drop-shadow-sm">
+                Gestiona tu creatividad de forma segura y eficiente.
             </p>
-        </div>
+            <p className="text-sm text-slate-600">
+                ¿Tienes problemas para ingresar? <a href="#" className="underline text-indigo-600">Contáctanos</a>
+            </p>
+        </motion.div>
     </div>
 )
 
-// ============================================================================
-// Componente 2: Formulario de Login (Separado para lógica)
-// ============================================================================
 const LoginForm = () => {
     const [role, setRole] = useState<'artist' | 'admin'>('artist')
     const [isLoading, setIsLoading] = useState(false)
@@ -64,10 +68,10 @@ const LoginForm = () => {
 
     return (
         <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
-            className="w-full max-w-md rounded-2xl bg-white/80 p-8 shadow-2xl backdrop-blur-xl"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+            className="w-full max-w-md rounded-3xl bg-white/60 p-10 shadow-2xl backdrop-blur-2xl border border-white/20"
         >
             <AnimatePresence mode="wait">
                 <motion.div
@@ -76,15 +80,21 @@ const LoginForm = () => {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 10 }}
                     transition={{ duration: 0.2 }}
-                    className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br text-white shadow-lg from-rose-300 to-sky-300"
+                    className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br text-white shadow-lg from-indigo-400 to-sky-400"
                 >
                     {role === 'artist' ? <User size={32} /> : <Shield size={32} />}
                 </motion.div>
             </AnimatePresence>
 
             <motion.h2 className="mt-6 text-center text-2xl font-bold tracking-tight text-slate-800">
-                {role === 'artist' ? 'Portal del Artista' : 'Acceso de Admin'}
+                Acceso a la Plataforma de Pagos
             </motion.h2>
+
+            <p className="mt-2 text-center text-sm text-slate-600">
+                {role === 'artist'
+                    ? 'Ingresa tu correo electrónico registrado. Te enviaremos un enlace de acceso seguro y de un solo uso.'
+                    : 'Inicia sesión con tus credenciales de administrador.'}
+            </p>
 
             <div className="mt-8 flex rounded-full bg-slate-200/70 p-1">
                 {['artist', 'admin'].map((r) => (
@@ -100,7 +110,7 @@ const LoginForm = () => {
                                 className="absolute inset-0 z-0 rounded-full bg-white shadow-md"
                             />
                         )}
-                        <span className="relative z-10">{r}</span>
+                        <span className="relative z-10">{r === 'artist' ? 'Artista' : 'Administrador'}</span>
                     </button>
                 ))}
             </div>
@@ -113,12 +123,13 @@ const LoginForm = () => {
                 className="mt-8 space-y-6"
             >
                 <motion.div variants={itemVariants} className="relative">
-                    <Mail className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                    <label className="block mb-1 text-sm font-medium text-slate-700">Correo Electrónico</label>
+                    <Mail className="pointer-events-none absolute left-4 top-[2.5rem] text-slate-400" size={20} />
                     <input
                         type="email"
                         required
-                        placeholder="correo@ejemplo.com"
-                        className="w-full rounded-full border border-slate-300 bg-white/80 py-3 pl-12 pr-4 text-slate-800 placeholder:text-slate-400 transition-shadow focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-300/50"
+                        placeholder="tu.nombre@email.com"
+                        className="w-full rounded-full border border-slate-300 bg-white/70 py-3 pl-12 pr-4 text-slate-800 placeholder:text-slate-400 transition-shadow focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-300/50"
                     />
                 </motion.div>
 
@@ -131,12 +142,13 @@ const LoginForm = () => {
                             exit={{ opacity: 0, height: 0, y: -10, transition: { duration: 0.3 } }}
                             className="relative"
                         >
-                            <KeyRound className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                            <label className="block mb-1 text-sm font-medium text-slate-700">Contraseña</label>
+                            <KeyRound className="pointer-events-none absolute left-4 top-[2.5rem] text-slate-400" size={20} />
                             <input
                                 type="password"
                                 required
-                                placeholder="Contraseña"
-                                className="w-full rounded-full border border-slate-300 bg-white/80 py-3 pl-12 pr-4 text-slate-800 placeholder:text-slate-400 transition-shadow focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-300/50"
+                                placeholder="Ingresa tu contraseña"
+                                className="w-full rounded-full border border-slate-300 bg-white/70 py-3 pl-12 pr-4 text-slate-800 placeholder:text-slate-400 transition-shadow focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-300/50"
                             />
                         </motion.div>
                     )}
@@ -144,33 +156,37 @@ const LoginForm = () => {
 
                 <motion.div variants={itemVariants}>
                     <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
+                        whileHover={{ scale: 1.04 }}
+                        whileTap={{ scale: 0.97 }}
                         type="submit"
                         disabled={isLoading}
-                        className="w-full rounded-full bg-gradient-to-r from-violet-500 to-sky-500 py-3 font-semibold text-white shadow-lg transition-transform hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-violet-400 focus:ring-offset-2 disabled:opacity-60"
+                        className="w-full rounded-full bg-gradient-to-r from-indigo-500 to-sky-500 py-3 font-semibold text-white shadow-xl transition-all hover:shadow-2xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 disabled:opacity-60"
                     >
-                        {isLoading ? 'Verificando...' : (role === 'artist' ? 'Enviar Enlace Mágico' : 'Iniciar Sesión')}
+                        {isLoading ? 'Verificando...' : (role === 'artist' ? 'ENVIAR ENLACE DE ACCESO' : 'INICIAR SESIÓN')}
                     </motion.button>
                 </motion.div>
+
+                <p className="text-center text-sm text-slate-500">
+                    ¿No puedes ingresar? <a href="#" className="underline text-indigo-600">Solicita ayuda</a>
+                </p>
             </motion.form>
         </motion.div>
     )
 }
 
-// ============================================================================
-// Componente Principal de la Página (Ensamblador)
-// ============================================================================
 export default function PolishedLoginPage() {
     return (
         <main className="min-h-screen font-sans antialiased">
             <div className="lg:grid lg:grid-cols-2">
                 <PastelAuroraBackground />
-                <div className="relative flex min-h-screen items-center justify-center bg-slate-100 p-4 lg:bg-transparent">
-                    <div className="absolute inset-0 bg-gradient-to-br from-rose-100 to-teal-100 lg:hidden" />
+                <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-br from-sky-100 to-indigo-200 p-4 lg:bg-transparent">
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-100 to-indigo-100 lg:hidden" />
                     <LoginForm />
                 </div>
             </div>
+            <footer className="w-full py-4 text-center text-sm text-slate-500 bg-white/30 backdrop-blur-md border-t border-white/10">
+                © 2025 Mon | <a href="#" className="underline text-indigo-600">Necesitas Ayuda?</a> | <a href="#" className="underline text-indigo-600">Política de Privacidad</a> | <a href="#" className="underline text-indigo-600">Términos de Servicio</a>
+            </footer>
         </main>
     )
 }
