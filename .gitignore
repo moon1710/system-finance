@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+#variables de entorno
+.env
+.env.local
+/src/generated/prisma
+/prisma

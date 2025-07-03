@@ -87,7 +87,7 @@ const LoginForm = () => {
             </AnimatePresence>
 
             <motion.h2 className="mt-6 text-center text-2xl font-bold tracking-tight text-slate-800">
-                Acceso a la Plataforma de Pagos
+                Acceso
             </motion.h2>
 
             <p className="mt-2 text-center text-sm text-slate-600">
