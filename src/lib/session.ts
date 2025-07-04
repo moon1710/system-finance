@@ -6,6 +6,7 @@ export interface SessionData {
   email: string
   rol: 'artista' | 'admin'
   isLoggedIn: boolean
+  nombreCompleto?: string
   lastActivity?: number
   id?: string // Para tracking de sesión
   ipAddress?: string // IP del usuario
