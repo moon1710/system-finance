@@ -72,7 +72,8 @@ export async function POST(request: NextRequest) {
         id: usuario.id,
         email: usuario.email,
         nombreCompleto: usuario.nombreCompleto,
-        rol: usuario.rol
+        rol: usuario.rol,
+        requiereCambioPassword: usuario.requiereCambioPassword
       }
     })
     

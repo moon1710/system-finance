@@ -6,27 +6,49 @@ import Link from 'next/link'
 
 export default function AdminDashboard() {
     const [user, setUser] = useState<any>(null)
+    const [loadingAuth, setLoadingAuth] = useState(true); // Nuevo estado para controlar la carga de autenticación
     const router = useRouter()
 
     useEffect(() => {
-        // Verificar sesión
-        fetch('/api/auth/me')
-            .then(res => res.json())
-            .then(data => {
+        const checkAuth = async () => {
+            try {
+                const res = await fetch('/api/auth/me');
+                const data = await res.json();
+
                 if (!data.isLoggedIn || data.user?.rol !== 'admin') {
-                    router.push('/login')
+                    router.push('/login');
                 } else {
-                    setUser(data.user)
+                    if (data.user.requiereCambioPassword) {
+                        router.push('/cambiar-password-inicial');
+                        // Es crucial retornar aquí para detener la ejecución y la renderización del dashboard.
+                        return;
+                    }
+                    setUser(data.user);
                 }
-            })
-    }, [router])
+            } catch (err) {
+                console.error("Error al verificar sesión:", err);
+                router.push('/login');
+            } finally {
+                setLoadingAuth(false); // La verificación de autenticación ha terminado
+            }
+        };
+
+        checkAuth();
+    }, [router]);
 
     const handleLogout = async () => {
         await fetch('/api/auth/logout', { method: 'POST' })
         router.push('/login')
     }
 
-    if (!user) return <div>Cargando...</div>
+    // Muestra un estado de carga mientras se verifica la autenticación/redirección
+    if (loadingAuth || !user) { // Añadimos loadingAuth aquí
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-100">
+                <p>Cargando panel de administración...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gray-100">
@@ -47,6 +69,10 @@ export default function AdminDashboard() {
                                 </Link>
                                 <Link href="/admin/retiros" className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
                                     Retiros
+                                </Link>
+                                {/* ¡Añadir el enlace para Crear Usuario aquí! */}
+                                <Link href="/admin/usuarios/crear" className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                                    Crear Usuario
                                 </Link>
                             </div>
                         </div>

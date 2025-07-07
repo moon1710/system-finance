@@ -7,26 +7,36 @@ import Link from 'next/link'
 
 export default function ArtistDashboard() {
     const [user, setUser] = useState<any>(null)
+    const [loadingAuth, setLoadingAuth] = useState(true); // Nuevo estado para controlar la carga de autenticación
     const router = useRouter()
 
+
     useEffect(() => {
-        // Verificar sesión y rol del usuario
-        fetch('/api/auth/me')
-            .then(res => res.json())
-            .then(data => {
-                // Si no está logueado o no es artista, redirigir al login
+        const checkAuth = async () => {
+            try {
+                const res = await fetch('/api/auth/me');
+                const data = await res.json();
+
                 if (!data.isLoggedIn || data.user?.rol !== 'artista') {
-                    router.push('/login')
+                    router.push('/login');
                 } else {
-                    setUser(data.user)
+                    if (data.user.requiereCambioPassword) {
+                        router.push('/cambiar-password-inicial');
+                        // Es crucial retornar aquí para detener la ejecución y la renderización del dashboard.
+                        return;
+                    }
+                    setUser(data.user);
                 }
-            })
-            .catch(err => {
+            } catch (err) {
                 console.error("Error al verificar sesión:", err);
-                // En caso de error de red o API, también redirige al login
                 router.push('/login');
-            });
-    }, [router])
+            } finally {
+                setLoadingAuth(false); // La verificación de autenticación ha terminado
+            }
+        };
+
+        checkAuth();
+    }, [router]);
 
     const handleLogout = async () => {
         // Redirige a la landing page ('/') después de cerrar sesión
@@ -34,8 +44,8 @@ export default function ArtistDashboard() {
         router.push('/');
     }
 
-    if (!user) {
-        // Puedes mostrar un spinner o un mensaje de carga más elaborado
+    // Muestra un estado de carga mientras se verifica la autenticación/redirección
+    if (loadingAuth || !user) { // Añadimos loadingAuth aquí
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-100">
                 <p>Cargando dashboard del artista...</p>
@@ -57,7 +67,7 @@ export default function ArtistDashboard() {
                                 <Link href="/artista" className="border-b-2 border-blue-500 text-gray-900 inline-flex items-center px-1 pt-1 text-sm font-medium">
                                     Dashboard
                                 </Link>
-                                <Link href="/artista/cuentas-bancarias" className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                                <Link href="/artista/cuentas" className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
                                     Cuentas Bancarias
                                 </Link>
                                 <Link href="/artista/retiros" className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
