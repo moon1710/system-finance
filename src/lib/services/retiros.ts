@@ -1,5 +1,6 @@
 // /lib/services/retiros.ts
-
+import fs from 'fs/promises'
+import path from 'path'
 import { PrismaClient } from '@prisma/client'
 import { 
   validarDatosRetiro, 
@@ -258,19 +259,9 @@ export async function obtenerSolicitudesPorAdmin(adminId: string): Promise<Resul
       };
     }
 
-    // Obtener artistas asignados al admin
-    const artistasAsignados = await prisma.adminArtistaRelacion.findMany({
-      where: { adminId: adminId },
-      select: { artistaId: true }
-    });
-
-    const artistaIds = artistasAsignados.map(rel => rel.artistaId);
-
-    // Obtener solicitudes de retiro de los artistas asignados
+    // TEMPORAL: Mostrar todos los retiros (sin filtrar por relación)
     const solicitudes = await prisma.retiro.findMany({
-      where: {
-        usuarioId: { in: artistaIds }
-      },
+      where: {},  // Sin filtros = todos los retiros
       include: {
         usuario: {
           select: {
@@ -286,8 +277,8 @@ export async function obtenerSolicitudesPorAdmin(adminId: string): Promise<Resul
         }
       },
       orderBy: [
-        { requiereRevision: 'desc' }, // Primero las que requieren revisión
-        { fechaSolicitud: 'desc' }     // Luego por fecha
+        { requiereRevision: 'desc' },
+        { fechaSolicitud: 'desc' }
       ]
     });
 
@@ -305,7 +296,6 @@ export async function obtenerSolicitudesPorAdmin(adminId: string): Promise<Resul
     };
   }
 }
-
 /**
  * Cambiar estado de retiro
  * @param retiroId - ID del retiro
@@ -333,7 +323,7 @@ export async function cambiarEstadoRetiro(
       };
     }
 
-    // Verificar que el admin tiene permisos sobre este artista
+/*     // Verificar que el admin tiene permisos sobre este artista
     const relacion = await prisma.adminArtistaRelacion.findUnique({
       where: {
         adminId_artistaId: {
@@ -348,7 +338,7 @@ export async function cambiarEstadoRetiro(
         exito: false,
         mensaje: 'No tienes permisos para modificar este retiro'
       };
-    }
+    } */
 
     // Validar transición de estado
     const validacionTransicion = validarTransicionEstado(retiro.estado, nuevoEstado);
@@ -437,7 +427,7 @@ export async function rechazarRetiro(
     }
 
     // Verificar permisos
-    const relacion = await prisma.adminArtistaRelacion.findUnique({
+/*     const relacion = await prisma.adminArtistaRelacion.findUnique({
       where: {
         adminId_artistaId: {
           adminId: adminId,
@@ -451,7 +441,7 @@ export async function rechazarRetiro(
         exito: false,
         mensaje: 'No tienes permisos para modificar este retiro'
       };
-    }
+    } */
 
     // Validar transición
     const validacionTransicion = validarTransicionEstado(retiro.estado, 'Rechazado');
@@ -529,7 +519,7 @@ export async function completarRetiro(
     }
 
     // Verificar permisos
-    const relacion = await prisma.adminArtistaRelacion.findUnique({
+/*     const relacion = await prisma.adminArtistaRelacion.findUnique({
       where: {
         adminId_artistaId: {
           adminId: adminId,
@@ -543,7 +533,7 @@ export async function completarRetiro(
         exito: false,
         mensaje: 'No tienes permisos para modificar este retiro'
       };
-    }
+    } */
 
     // Validar que está en estado "Procesando"
     if (retiro.estado !== 'Procesando') {
@@ -598,8 +588,6 @@ export async function subirComprobante(
   archivo: File
 ): Promise<ResultadoOperacion> {
   try {
-    const fs = require('fs').promises;
-    const path = require('path');
     
     // Validar archivo
     const validacionArchivo = validarComprobante({
@@ -630,7 +618,7 @@ export async function subirComprobante(
     }
 
     // Verificar que el admin tiene permisos
-    const relacion = await prisma.adminArtistaRelacion.findUnique({
+/*     const relacion = await prisma.adminArtistaRelacion.findUnique({
       where: {
         adminId_artistaId: {
           adminId: adminId,
@@ -644,7 +632,7 @@ export async function subirComprobante(
         exito: false,
         mensaje: 'No tienes permisos para subir comprobantes a este retiro'
       };
-    }
+    } */
 
     // Verificar que está en estado "Procesando"
     if (retiro.estado !== 'Procesando') {
