@@ -80,21 +80,15 @@ export async function crearAlerta(
 }
 
 /**
- * Obtener todas las solicitudes con alertas para un admin
+ * Obtener todas las solicitudes con alertas para un admin (TEMPORAL)
  */
 export async function obtenerSolicitudesConAlerta(adminId: string) {
-  // Primero obtener los artistas asignados al admin
-  const artistasDelAdmin = await prisma.adminArtistaRelacion.findMany({
-    where: { adminId },
-    select: { artistaId: true }
-  })
-  
-  const artistaIds = artistasDelAdmin.map(rel => rel.artistaId)
+  // TEMPORAL: Mostrar TODAS las alertas sin filtrar por admin
+  console.log('[DEBUG] Obteniendo solicitudes con alertas para admin:', adminId)
   
   // Obtener retiros con alertas no resueltas
   const retirosConAlerta = await prisma.retiro.findMany({
     where: {
-      usuarioId: { in: artistaIds },
       OR: [
         { 
           alertas: {
@@ -127,6 +121,8 @@ export async function obtenerSolicitudesConAlerta(adminId: string) {
       { fechaSolicitud: 'desc' }
     ]
   })
+  
+  console.log('[DEBUG] Retiros con alertas encontrados:', retirosConAlerta.length)
   
   return retirosConAlerta
 }
@@ -280,9 +276,11 @@ async function verificarCuentaNueva(cuentaBancariaId: string): Promise<boolean> 
 }
 
 /**
- * Obtener resumen de alertas para el dashboard
+ * Obtener resumen de alertas para el dashboard (TEMPORAL)
  */
 export async function obtenerResumenAlertas(adminId: string) {
+  console.log('[DEBUG] Obteniendo resumen de alertas para admin:', adminId)
+  
   const solicitudesConAlerta = await obtenerSolicitudesConAlerta(adminId)
   
   const resumen = {
@@ -297,20 +295,14 @@ export async function obtenerResumenAlertas(adminId: string) {
     alertasNoResueltas: 0
   }
   
-  // Contar todas las alertas no resueltas
+  // TEMPORAL: Contar TODAS las alertas no resueltas
   const alertasNoResueltas = await prisma.alerta.count({
     where: {
-      resuelta: false,
-      retiro: {
-        usuarioId: { 
-          in: (await prisma.adminArtistaRelacion.findMany({
-            where: { adminId },
-            select: { artistaId: true }
-          })).map(rel => rel.artistaId)
-        }
-      }
+      resuelta: false
     }
   })
+  
+  console.log('[DEBUG] Total alertas no resueltas en BD:', alertasNoResueltas)
   
   resumen.alertasNoResueltas = alertasNoResueltas
   
@@ -319,6 +311,7 @@ export async function obtenerResumenAlertas(adminId: string) {
     resumen.montoTotal = resumen.montoTotal.add(solicitud.montoSolicitado)
     
     solicitud.alertas.forEach(alerta => {
+      console.log('[DEBUG] Procesando alerta tipo:', alerta.tipo)
       switch (alerta.tipo) {
         case 'MONTO_ALTO':
           resumen.porTipo.montoAlto++
@@ -335,6 +328,8 @@ export async function obtenerResumenAlertas(adminId: string) {
       }
     })
   })
+  
+  console.log('[DEBUG] Resumen final:', resumen)
   
   return resumen
 }

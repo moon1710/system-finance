@@ -1,122 +1,235 @@
 // app/admin/alertas/page.tsx
 
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 
-interface Alerta {
-  tipo: string
-  mensaje: string
-  nivel: 'warning' | 'danger'
+// Interfaces de datos esperadas en el frontend
+interface AlertaLocal {
+  tipo: string;
+  mensaje: string;
+  nivel: 'warning' | 'danger';
 }
 
-interface SolicitudUrgente {
-  id: string
-  usuario: string
-  monto: string
-  fecha: string
-  alertas: Alerta[]
-  requiereRevision: boolean
+interface SolicitudUrgenteLocal {
+  id: string;
+  usuarioNombre: string;
+  monto: string;
+  fecha: string;
+  alertas: AlertaLocal[];
+  requiereRevision: boolean; // Determinada por la existencia de alertas
 }
 
-interface ResumenAlertas {
-  total: number
+interface ResumenAlertasLocal {
+  totalAlertas: number;
+  alertasNoResueltas: number;
+  montoTotalAlertas: string;
   porTipo: {
-    montoAlto: number
-    retirosMultiples: number
-    patronSospechoso: number
-    cuentaNueva: number
-  }
-  montoTotal: string
-  requierenRevision: number
+    montoAlto: number;
+    retirosMultiples: number;
+    patronSospechoso: number; // No hay datos para esto en tu JSON, se inicializará en 0
+    cuentaNueva: number;
+  };
+}
+
+// Interfaces de la respuesta directa de la API (para mejor tipado al recibir datos)
+interface RetiroAPI {
+  id: string;
+  usuarioId: string;
+  cuentaBancariaId: string;
+  montoSolicitado: string;
+  estado: string;
+  urlComprobante: string | null;
+  notasAdmin: string | null;
+  fechaSolicitud: string;
+  fechaActualizacion: string;
+  usuario: {
+    id: string;
+    nombreCompleto: string;
+    email: string;
+  };
+  cuentaBancaria: {
+    tipoCuenta: string;
+    nombreTitular: string;
+  };
+  alertas: {
+    id: string;
+    retiroId: string;
+    tipo: string;
+    mensaje: string;
+    resuelta: boolean;
+    createdAt: string;
+    updatedAt: string;
+  }[];
+}
+
+interface StatsAPI {
+  total: number;
+  pendientes: number;
+  conAlertas: number;
+  requierenRevision: number;
+}
+
+interface APIResponse {
+  success: boolean;
+  retiros: RetiroAPI[];
+  stats: StatsAPI;
 }
 
 export default function AlertasDashboard() {
-  const [loading, setLoading] = useState(true)
-  const [resumen, setResumen] = useState<ResumenAlertas | null>(null)
-  const [solicitudesUrgentes, setSolicitudesUrgentes] = useState<SolicitudUrgente[]>([])
+  const [loading, setLoading] = useState(true);
+  const [resumen, setResumen] = useState<ResumenAlertasLocal | null>(null);
+  const [solicitudesUrgentes, setSolicitudesUrgentes] = useState<SolicitudUrgenteLocal[]>([]);
   const [configuracion, setConfiguracion] = useState({
     montoAlto: 50000,
     maxRetirosMes: 1,
-    diasRevisionRapida: 7
-  })
-  const [editandoConfig, setEditandoConfig] = useState(false)
-  const router = useRouter()
+    diasRevisionRapida: 7, // Este umbral no se usa en el procesamiento actual de alertas
+  });
+  const [editandoConfig, setEditandoConfig] = useState(false);
+  const router = useRouter();
 
-  useEffect(() => {
-    cargarDatos()
-    cargarConfiguracion()
-  }, [])
+  // Función para obtener el color y estilo de la alerta
+  const getNivelColor = (nivel: 'warning' | 'danger') => {
+    return nivel === 'danger' ? 'text-red-600 bg-red-100' : 'text-yellow-600 bg-yellow-100';
+  };
 
-  const cargarDatos = async () => {
+  // Función para obtener el icono de la alerta
+  const getTipoAlertaIcon = (tipo: string) => {
+    switch (tipo) {
+      case 'MONTO_ALTO':
+        return '💰';
+      case 'RETIROS_MULTIPLES':
+        return '🔄';
+      case 'PATRON_SOSPECHOSO':
+        return '⚠️';
+      case 'CUENTA_NUEVA':
+        return '🆕';
+      default:
+        return '📌';
+    }
+  };
+
+  // Carga de los datos principales del dashboard
+  const cargarDatos = useCallback(async () => {
+    setLoading(true);
     try {
-      const res = await fetch('/api/admin/alertas')
+      const res = await fetch('/api/admin/alertas');
       if (!res.ok) {
-        if (res.status === 403) router.push('/login')
-        return
+        if (res.status === 403) {
+          router.push('/login');
+        } else {
+          console.error('Error al cargar alertas:', res.statusText);
+        }
+        return;
       }
-      
-      const data = await res.json()
-      setResumen(data.resumen)
-      setSolicitudesUrgentes(data.solicitudesUrgentes)
+
+      const data: APIResponse = await res.json();
+
+      // Mapeo de retiros de la API a SolicitudUrgenteLocal
+      const mappedSolicitudes: SolicitudUrgenteLocal[] = data.retiros.map(retiro => {
+        const alertasLocales: AlertaLocal[] = retiro.alertas.map(alerta => ({
+          tipo: alerta.tipo,
+          mensaje: alerta.mensaje,
+          // Determinar el nivel basado en el tipo de alerta (ejemplo de lógica)
+          nivel: (alerta.tipo === 'MONTO_ALTO' || alerta.tipo === 'RETIROS_MULTIPLES') ? 'danger' : 'warning',
+        }));
+
+        // Una solicitud requiere revisión si tiene alguna alerta no resuelta
+        const requiereRevision = alertasLocales.length > 0;
+
+        return {
+          id: retiro.id,
+          usuarioNombre: retiro.usuario.nombreCompleto,
+          monto: retiro.montoSolicitado,
+          fecha: retiro.fechaSolicitud,
+          alertas: alertasLocales,
+          requiereRevision: requiereRevision,
+        };
+      });
+
+      // Filtrar solo las solicitudes que requieren atención inmediata para la tabla
+      const solicitudesParaTabla = mappedSolicitudes.filter(sol => sol.requiereRevision);
+      setSolicitudesUrgentes(solicitudesParaTabla);
+
+      // Cálculo del resumen de alertas
+      const totalAlertas = mappedSolicitudes.reduce((sum, sol) => sum + sol.alertas.length, 0);
+      const alertasNoResueltas = mappedSolicitudes.reduce((sum, sol) =>
+        sum + sol.alertas.filter(alerta => alerta.nivel === 'danger' || alerta.nivel === 'warning').length, 0); // Asumiendo que cualquier alerta es "no resuelta" si se muestra aquí
+      const montoTotalAlertas = mappedSolicitudes
+        .filter(sol => sol.requiereRevision)
+        .reduce((sum, sol) => sum + parseFloat(sol.monto), 0)
+        .toFixed(2);
+
+      const porTipo = {
+        montoAlto: mappedSolicitudes.filter(sol => sol.alertas.some(alerta => alerta.tipo === 'MONTO_ALTO')).length,
+        retirosMultiples: mappedSolicitudes.filter(sol => sol.alertas.some(alerta => alerta.tipo === 'RETIROS_MULTIPLES')).length,
+        patronSospechoso: mappedSolicitudes.filter(sol => sol.alertas.some(alerta => alerta.tipo === 'PATRON_SOSPECHOSO')).length, // Se basará en el mapeo, si no hay en la API, será 0
+        cuentaNueva: mappedSolicitudes.filter(sol => sol.alertas.some(alerta => alerta.tipo === 'CUENTA_NUEVA')).length,
+      };
+
+      setResumen({
+        totalAlertas,
+        alertasNoResueltas,
+        montoTotalAlertas,
+        porTipo,
+      });
+
     } catch (error) {
-      console.error('Error cargando alertas:', error)
+      console.error('Error en cargarDatos:', error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  }, [router]);
 
-  const cargarConfiguracion = async () => {
+  // Carga de la configuración
+  const cargarConfiguracion = useCallback(async () => {
     try {
-      const res = await fetch('/api/admin/alertas/configuracion')
+      const res = await fetch('/api/admin/alertas/configuracion');
       if (res.ok) {
-        const data = await res.json()
-        setConfiguracion(data.configuracion)
+        const data = await res.json();
+        setConfiguracion(data.configuracion);
       }
     } catch (error) {
-      console.error('Error cargando configuración:', error)
+      console.error('Error cargando configuración:', error);
     }
-  }
+  }, []);
 
+  // Guardar la configuración
   const guardarConfiguracion = async () => {
     try {
       const res = await fetch('/api/admin/alertas/configuracion', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(configuracion)
-      })
-      
+        body: JSON.stringify(configuracion),
+      });
+
       if (res.ok) {
-        setEditandoConfig(false)
-        alert('Configuración actualizada')
-        cargarDatos() // Recargar con nuevos umbrales
+        setEditandoConfig(false);
+        alert('Configuración actualizada');
+        cargarDatos(); // Recargar datos con la nueva configuración
+      } else {
+        alert('Error al guardar configuración');
+        console.error('Error al guardar configuración:', res.statusText);
       }
     } catch (error) {
-      alert('Error al guardar configuración')
+      alert('Error al guardar configuración');
+      console.error('Error al guardar configuración:', error);
     }
-  }
+  };
 
-  const getNivelColor = (nivel: 'warning' | 'danger') => {
-    return nivel === 'danger' ? 'text-red-600 bg-red-100' : 'text-yellow-600 bg-yellow-100'
-  }
+  useEffect(() => {
+    cargarDatos();
+    cargarConfiguracion();
+  }, [cargarDatos, cargarConfiguracion]);
 
-  const getTipoAlertaIcon = (tipo: string) => {
-    switch (tipo) {
-      case 'MONTO_ALTO':
-        return '💰'
-      case 'RETIROS_MULTIPLES':
-        return '🔄'
-      case 'PATRON_SOSPECHOSO':
-        return '⚠️'
-      case 'CUENTA_NUEVA':
-        return '🆕'
-      default:
-        return '📌'
-    }
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen text-xl text-gray-700">
+        Cargando alertas...
+      </div>
+    );
   }
-
-  if (loading) return <div className="p-8">Cargando alertas...</div>
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -138,7 +251,7 @@ export default function AlertasDashboard() {
             </div>
             <div className="ml-5">
               <p className="text-sm font-medium text-gray-500">Total Alertas</p>
-              <p className="text-2xl font-semibold text-gray-900">{resumen?.total || 0}</p>
+              <p className="text-2xl font-semibold text-gray-900">{resumen?.totalAlertas || 0}</p>
             </div>
           </div>
         </div>
@@ -185,9 +298,9 @@ export default function AlertasDashboard() {
               </div>
             </div>
             <div className="ml-5">
-              <p className="text-sm font-medium text-gray-500">Monto Total</p>
+              <p className="text-sm font-medium text-gray-500">Monto Total con Alertas</p>
               <p className="text-2xl font-semibold text-gray-900">
-                ${parseFloat(resumen?.montoTotal || '0').toLocaleString()}
+                ${parseFloat(resumen?.montoTotalAlertas || '0').toLocaleString()}
               </p>
             </div>
           </div>
@@ -248,48 +361,51 @@ export default function AlertasDashboard() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {solicitudesUrgentes.map((solicitud) => (
-                <tr key={solicitud.id} className={solicitud.requiereRevision ? 'bg-red-50' : ''}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{solicitud.usuario}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900 font-semibold">
-                      ${parseFloat(solicitud.monto).toLocaleString()}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-wrap gap-1">
-                      {solicitud.alertas.map((alerta, idx) => (
-                        <span
-                          key={idx}
-                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getNivelColor(alerta.nivel)}`}
-                        >
-                          {getTipoAlertaIcon(alerta.tipo)} {alerta.mensaje}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(solicitud.fecha).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <button
-                      onClick={() => router.push(`/admin/retiros/${solicitud.id}`)}
-                      className="text-blue-600 hover:text-blue-900 font-medium"
-                    >
-                      Revisar →
-                    </button>
+              {solicitudesUrgentes.length > 0 ? (
+                solicitudesUrgentes.map((solicitud) => (
+                  <tr key={solicitud.id} className={solicitud.requiereRevision ? 'bg-red-50' : ''}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{solicitud.usuarioNombre}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900 font-semibold">
+                        ${parseFloat(solicitud.monto).toLocaleString()}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-wrap gap-1">
+                        {solicitud.alertas.map((alerta, idx) => (
+                          <span
+                            key={idx}
+                            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getNivelColor(alerta.nivel)}`}
+                          >
+                            {getTipoAlertaIcon(alerta.tipo)} {alerta.mensaje}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(solicitud.fecha).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <button
+                        onClick={() => router.push(`/admin/retiros/${solicitud.id}`)}
+                        className="text-blue-600 hover:text-blue-900 font-medium"
+                      >
+                        Revisar →
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={5} className="text-center py-8 text-gray-500">
+                    No hay solicitudes urgentes en este momento
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
-          {solicitudesUrgentes.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              No hay solicitudes urgentes en este momento
-            </div>
-          )}
         </div>
       </div>
 
@@ -299,57 +415,59 @@ export default function AlertasDashboard() {
           <h2 className="text-lg font-semibold">Configuración de Umbrales</h2>
           <button
             onClick={() => editandoConfig ? guardarConfiguracion() : setEditandoConfig(true)}
-            className={`px-4 py-2 rounded ${
-              editandoConfig 
-                ? 'bg-green-600 hover:bg-green-700 text-white' 
+            className={`px-4 py-2 rounded ${editandoConfig
+                ? 'bg-green-600 hover:bg-green-700 text-white'
                 : 'bg-blue-600 hover:bg-blue-700 text-white'
-            }`}
+              }`}
           >
             {editandoConfig ? 'Guardar' : 'Editar'}
           </button>
         </div>
         <div className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="montoAlto" className="block text-sm font-medium text-gray-700 mb-1">
               Monto Alto (USD)
             </label>
             <input
               type="number"
+              id="montoAlto"
               disabled={!editandoConfig}
               value={configuracion.montoAlto}
-              onChange={(e) => setConfiguracion({...configuracion, montoAlto: parseInt(e.target.value)})}
+              onChange={(e) => setConfiguracion({ ...configuracion, montoAlto: parseInt(e.target.value) })}
               className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100"
             />
             <p className="text-xs text-gray-500 mt-1">
               Retiros iguales o mayores a este monto generarán alerta
             </p>
           </div>
-          
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="maxRetirosMes" className="block text-sm font-medium text-gray-700 mb-1">
               Máximo Retiros por Mes
             </label>
             <input
               type="number"
+              id="maxRetirosMes"
               disabled={!editandoConfig}
               value={configuracion.maxRetirosMes}
-              onChange={(e) => setConfiguracion({...configuracion, maxRetirosMes: parseInt(e.target.value)})}
+              onChange={(e) => setConfiguracion({ ...configuracion, maxRetirosMes: parseInt(e.target.value) })}
               className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100"
             />
             <p className="text-xs text-gray-500 mt-1">
               Más retiros que este número en un mes generarán alerta
             </p>
           </div>
-          
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="diasRevisionRapida" className="block text-sm font-medium text-gray-700 mb-1">
               Días para Revisión Rápida
             </label>
             <input
               type="number"
+              id="diasRevisionRapida"
               disabled={!editandoConfig}
               value={configuracion.diasRevisionRapida}
-              onChange={(e) => setConfiguracion({...configuracion, diasRevisionRapida: parseInt(e.target.value)})}
+              onChange={(e) => setConfiguracion({ ...configuracion, diasRevisionRapida: parseInt(e.target.value) })}
               className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100"
             />
             <p className="text-xs text-gray-500 mt-1">
@@ -359,5 +477,5 @@ export default function AlertasDashboard() {
         </div>
       </div>
     </div>
-  )
+  );
 }

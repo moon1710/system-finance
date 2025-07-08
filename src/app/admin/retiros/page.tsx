@@ -3,11 +3,17 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
+interface Alerta {
+    id: string
+    tipo: string
+    mensaje: string
+    resuelta: boolean
+}
+
 interface Solicitud {
     id: string
-    montoSolicitado: number
+    montoSolicitado: string | number
     estado: 'Pendiente' | 'Procesando' | 'Completado' | 'Rechazado'
-    requiereRevision: boolean
     fechaSolicitud: string
     fechaActualizacion: string
     notasAdmin?: string
@@ -19,7 +25,9 @@ interface Solicitud {
     cuentaBancaria: {
         tipoCuenta: string
         nombreBanco?: string
+        nombreTitular: string
     }
+    alertas: Alerta[]
 }
 
 interface Estadisticas {
@@ -48,6 +56,7 @@ export default function AdminRetirosPage() {
     const router = useRouter()
 
     useEffect(() => {
+        console.log('Componente montado, fetchSolicitudes...')
         fetchSolicitudes()
     }, [filtroEstado, soloAlertas])
 
@@ -58,12 +67,20 @@ export default function AdminRetirosPage() {
             if (filtroEstado) params.append('estado', filtroEstado)
             if (soloAlertas) params.append('alertas', 'true')
 
+            console.log('Fetching con params:', params.toString())
             const res = await fetch(`/api/admin/retiros?${params}`)
+            
             if (!res.ok) {
+                console.error('Error response:', res.status)
                 if (res.status === 401) router.push('/login')
                 return
             }
+            
             const data = await res.json()
+            console.log('Data recibida:', data)
+            console.log('Solicitudes:', data.solicitudes)
+            console.log('Estadísticas:', data.estadisticas)
+            
             setSolicitudes(data.solicitudes || [])
             setEstadisticas(data.estadisticas || null)
         } catch (error) {
@@ -163,17 +180,18 @@ export default function AdminRetirosPage() {
         }
     }
 
-    const formatEstado = (estado: string, requiereRevision: boolean) => {
+    const formatEstado = (estado: string, alertas: Alerta[]) => {
+        const tieneAlertas = alertas && alertas.length > 0
         let className = 'inline-flex px-2 py-1 text-xs font-semibold rounded-full '
 
         switch (estado) {
             case 'Pendiente':
-                className += requiereRevision
+                className += tieneAlertas
                     ? 'bg-yellow-100 text-yellow-800 border border-yellow-300'
                     : 'bg-blue-100 text-blue-800'
                 return (
                     <span className={className}>
-                        {estado} {requiereRevision && '⚠️'}
+                        {estado} {tieneAlertas && `⚠️ (${alertas.length})`}
                     </span>
                 )
             case 'Procesando':
@@ -193,8 +211,18 @@ export default function AdminRetirosPage() {
     }
 
     const formatCuentaInfo = (cuentaBancaria: any) => {
-        return `${cuentaBancaria.tipoCuenta} - ${cuentaBancaria.nombreBanco || 'Sin banco'}`
+        const tipo = cuentaBancaria.tipoCuenta || 'Sin tipo'
+        const titular = cuentaBancaria.nombreTitular || 'Sin titular'
+        return (
+            <div>
+                <div className="text-sm font-medium capitalize">{tipo}</div>
+                <div className="text-xs text-gray-500">{titular}</div>
+            </div>
+        )
     }
+
+    console.log('Estado actual - loading:', loading)
+    console.log('Estado actual - solicitudes:', solicitudes)
 
     if (loading) return <div className="p-8">Cargando...</div>
 
@@ -205,10 +233,11 @@ export default function AdminRetirosPage() {
                 <div className="flex space-x-2">
                     <button
                         onClick={() => setSoloAlertas(!soloAlertas)}
-                        className={`px-4 py-2 rounded text-sm font-medium ${soloAlertas
+                        className={`px-4 py-2 rounded text-sm font-medium ${
+                            soloAlertas
                                 ? 'bg-red-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
+                        }`}
                     >
                         {soloAlertas ? '🚨 Mostrando Alertas' : 'Ver Solo Alertas'}
                     </button>
@@ -245,13 +274,13 @@ export default function AdminRetirosPage() {
                     <div className="bg-purple-50 p-3 rounded-lg">
                         <h3 className="text-xs font-medium text-purple-600">Pendiente $</h3>
                         <p className="text-lg font-bold text-purple-900">
-                            ${estadisticas.montoTotalPendiente.toLocaleString()}
+                            ${estadisticas.montoTotalPendiente?.toLocaleString() || 0}
                         </p>
                     </div>
                     <div className="bg-teal-50 p-3 rounded-lg">
                         <h3 className="text-xs font-medium text-teal-600">Completado $</h3>
                         <p className="text-lg font-bold text-teal-900">
-                            ${estadisticas.montoTotalCompletado.toLocaleString()}
+                            ${estadisticas.montoTotalCompletado?.toLocaleString() || 0}
                         </p>
                     </div>
                 </div>
@@ -276,23 +305,11 @@ export default function AdminRetirosPage() {
                             <option value="Rechazado">Rechazado</option>
                         </select>
                     </div>
-                    <div className="flex items-center">
-                        <input
-                            type="checkbox"
-                            id="alertas"
-                            checked={soloAlertas}
-                            onChange={(e) => setSoloAlertas(e.target.checked)}
-                            className="mr-2"
-                        />
-                        <label htmlFor="alertas" className="text-sm font-medium text-gray-700">
-                            Solo mostrar alertas
-                        </label>
-                    </div>
                 </div>
             </div>
 
             {/* Lista de solicitudes */}
-            <div className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="bg-white rounded-lg shadow overflow-x-auto">
                 {solicitudes.length === 0 ? (
                     <div className="p-8 text-center text-gray-500">
                         {soloAlertas
@@ -320,6 +337,9 @@ export default function AdminRetirosPage() {
                                     Estado
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                    Alertas
+                                </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                                     Fecha
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -328,81 +348,118 @@ export default function AdminRetirosPage() {
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                            {solicitudes.map((solicitud) => (
-                                <tr
-                                    key={solicitud.id}
-                                    className={solicitud.requiereRevision ? 'bg-yellow-50' : ''}
-                                >
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono">
-                                        #{solicitud.id.slice(-8)}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div>
-                                            <div className="text-sm font-medium text-gray-900">
-                                                {solicitud.usuario.nombreCompleto}
+                            {solicitudes.map((solicitud) => {
+                                console.log('Renderizando solicitud:', solicitud.id, solicitud)
+                                return (
+                                    <tr
+                                        key={solicitud.id}
+                                        className={solicitud.alertas && solicitud.alertas.length > 0 ? 'bg-yellow-50' : ''}
+                                    >
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-mono">
+                                            #{solicitud.id.slice(-8)}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div>
+                                                <div className="text-sm font-medium text-gray-900">
+                                                    {solicitud.usuario.nombreCompleto}
+                                                </div>
+                                                <div className="text-sm text-gray-500">
+                                                    {solicitud.usuario.email}
+                                                </div>
                                             </div>
-                                            <div className="text-sm text-gray-500">
-                                                {solicitud.usuario.email}
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold">
-                                        ${solicitud.montoSolicitado.toLocaleString()}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                        {formatCuentaInfo(solicitud.cuentaBancaria)}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        {formatEstado(solicitud.estado, solicitud.requiereRevision)}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {new Date(solicitud.fechaSolicitud).toLocaleDateString()}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
-                                        {solicitud.estado === 'Pendiente' && (
-                                            <>
-                                                <button
-                                                    onClick={() => aprobarRetiro(solicitud.id)}
-                                                    disabled={submitLoading}
-                                                    className="text-green-600 hover:text-green-900 disabled:opacity-50"
-                                                >
-                                                    Aprobar
-                                                </button>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold">
+                                            ${parseFloat(String(solicitud.montoSolicitado)).toLocaleString()}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                            {formatCuentaInfo(solicitud.cuentaBancaria)}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            {formatEstado(solicitud.estado, solicitud.alertas || [])}
+                                        </td>
+                                        <td className="px-6 py-4 text-sm">
+                                            {solicitud.alertas && solicitud.alertas.length > 0 ? (
+                                                <div className="space-y-1">
+                                                    {solicitud.alertas.map((alerta) => (
+                                                        <div key={alerta.id} className="text-xs">
+                                                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                                                alerta.tipo === 'MONTO_ALTO'
+                                                                    ? 'bg-red-100 text-red-800'
+                                                                    : alerta.tipo === 'RETIROS_MULTIPLES'
+                                                                    ? 'bg-orange-100 text-orange-800'
+                                                                    : 'bg-yellow-100 text-yellow-800'
+                                                            }`}>
+                                                                {alerta.tipo === 'MONTO_ALTO' && '💰'}
+                                                                {alerta.tipo === 'RETIROS_MULTIPLES' && '🔄'}
+                                                                {alerta.tipo === 'CUENTA_NUEVA' && '🆕'}
+                                                                {' ' + alerta.mensaje}
+                                                            </span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <span className="text-gray-400 text-xs">Sin alertas</span>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            {new Date(solicitud.fechaSolicitud).toLocaleDateString()}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+                                            {solicitud.estado === 'Pendiente' && (
+                                                <>
+                                                    <button
+                                                        onClick={() => aprobarRetiro(solicitud.id)}
+                                                        disabled={submitLoading}
+                                                        className="text-green-600 hover:text-green-900 disabled:opacity-50"
+                                                    >
+                                                        Aprobar
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            setSolicitudSeleccionada(solicitud.id)
+                                                            setShowRechazarModal(true)
+                                                        }}
+                                                        disabled={submitLoading}
+                                                        className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                                                    >
+                                                        Rechazar
+                                                    </button>
+                                                </>
+                                            )}
+                                            {solicitud.estado === 'Procesando' && (
                                                 <button
                                                     onClick={() => {
                                                         setSolicitudSeleccionada(solicitud.id)
-                                                        setShowRechazarModal(true)
+                                                        setShowComprobanteModal(true)
                                                     }}
                                                     disabled={submitLoading}
-                                                    className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                                                    className="text-blue-600 hover:text-blue-900 disabled:opacity-50"
                                                 >
-                                                    Rechazar
+                                                    Subir Comprobante
                                                 </button>
-                                            </>
-                                        )}
-                                        {solicitud.estado === 'Procesando' && (
-                                            <button
-                                                onClick={() => {
-                                                    setSolicitudSeleccionada(solicitud.id)
-                                                    setShowComprobanteModal(true)
-                                                }}
-                                                disabled={submitLoading}
-                                                className="text-blue-600 hover:text-blue-900 disabled:opacity-50"
-                                            >
-                                                Subir Comprobante
-                                            </button>
-                                        )}
-                                        {solicitud.estado === 'Rechazado' && solicitud.notasAdmin && (
-                                            <button
-                                                onClick={() => alert(`Motivo: ${solicitud.notasAdmin}`)}
-                                                className="text-gray-600 hover:text-gray-900"
-                                            >
-                                                Ver Motivo
-                                            </button>
-                                        )}
-                                    </td>
-                                </tr>
-                            ))}
+                                            )}
+                                            {solicitud.estado === 'Completado' && solicitud.urlComprobante && (
+                                                <a
+                                                    href={`/api/retiros/${solicitud.id}/comprobante`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-blue-600 hover:text-blue-900"
+                                                >
+                                                    Ver Comprobante
+                                                </a>
+                                            )}
+                                            {solicitud.estado === 'Rechazado' && solicitud.notasAdmin && (
+                                                <button
+                                                    onClick={() => alert(`Motivo: ${solicitud.notasAdmin}`)}
+                                                    className="text-gray-600 hover:text-gray-900"
+                                                >
+                                                    Ver Motivo
+                                                </button>
+                                            )}
+                                        </td>
+                                    </tr>
+                                )
+                            })}
                         </tbody>
                     </table>
                 )}
