@@ -6,9 +6,9 @@ import {
   validarDatosRetiro, 
   validarTransicionEstado,
   validarMotivoRechazo,
-  requiereRevisionEspecial,
-  obtenerAlertasRetiro
+  validarComprobante
 } from '@/lib/validations/retiros'
+import { generarAlertasAutomaticas } from '@/lib/services/alertas'
 
 const prisma = new PrismaClient()
 
@@ -101,34 +101,13 @@ export async function crearSolicitudRetiro(
       };
     }
 
-    // Verificar si requiere revisión especial
-    const revisionEspecial = requiereRevisionEspecial(monto);
-
-    // Contar retiros del mes actual para alertas
-    const inicioMes = new Date();
-    inicioMes.setDate(1);
-    inicioMes.setHours(0, 0, 0, 0);
-
-    const retirosDelMes = await prisma.retiro.count({
-      where: {
-        usuarioId: userId,
-        fechaSolicitud: {
-          gte: inicioMes
-        }
-      }
-    });
-
-    // Generar alertas
-    const alertas = obtenerAlertasRetiro(monto, retirosDelMes);
-
-    // Crear la solicitud
+    // Crear la solicitud SIN requiereRevision
     const nuevaSolicitud = await prisma.retiro.create({
       data: {
         usuarioId: userId,
         cuentaBancariaId: cuentaId,
         montoSolicitado: monto,
         estado: 'Pendiente',
-        requiereRevision: revisionEspecial.requiere || alertas.length > 0,
         notasAdmin: notas || null
       },
       include: {
@@ -147,11 +126,23 @@ export async function crearSolicitudRetiro(
       }
     });
 
+    // Generar alertas automáticas usando el nuevo sistema
+    let alertasGeneradas: any[] = [];
+    try {
+      alertasGeneradas = await generarAlertasAutomaticas(nuevaSolicitud.id);
+    } catch (error) {
+      console.error('Error generando alertas:', error);
+      // No fallar la creación del retiro si fallan las alertas
+    }
+
     return {
       exito: true,
       mensaje: 'Solicitud de retiro creada exitosamente',
-      data: nuevaSolicitud,
-      alertas: alertas.length > 0 ? alertas : undefined
+      data: {
+        ...nuevaSolicitud,
+        alertas: alertasGeneradas
+      },
+      alertas: alertasGeneradas.length > 0 ? alertasGeneradas.map(a => a.mensaje) : undefined
     };
 
   } catch (error) {
@@ -180,6 +171,9 @@ export async function obtenerRetirosUsuario(userId: string): Promise<ResultadoOp
             numeroCuenta: true,
             emailPaypal: true
           }
+        },
+        alertas: {
+          orderBy: { createdAt: 'desc' }
         }
       },
       orderBy: { fechaSolicitud: 'desc' }
@@ -274,18 +268,28 @@ export async function obtenerSolicitudesPorAdmin(adminId: string): Promise<Resul
             tipoCuenta: true,
             nombreBanco: true
           }
+        },
+        alertas: {
+          where: { resuelta: false },
+          orderBy: { createdAt: 'desc' }
         }
       },
       orderBy: [
-        { requiereRevision: 'desc' },
         { fechaSolicitud: 'desc' }
       ]
     });
 
+    // Agregar información de si tiene alertas
+    const solicitudesConInfo = solicitudes.map(solicitud => ({
+      ...solicitud,
+      tieneAlertas: solicitud.alertas.length > 0,
+      cantidadAlertas: solicitud.alertas.length
+    }));
+
     return {
       exito: true,
       mensaje: 'Solicitudes obtenidas exitosamente',
-      data: solicitudes
+      data: solicitudesConInfo
     };
 
   } catch (error) {
@@ -296,6 +300,7 @@ export async function obtenerSolicitudesPorAdmin(adminId: string): Promise<Resul
     };
   }
 }
+
 /**
  * Cambiar estado de retiro
  * @param retiroId - ID del retiro
@@ -323,7 +328,8 @@ export async function cambiarEstadoRetiro(
       };
     }
 
-/*     // Verificar que el admin tiene permisos sobre este artista
+    // TEMPORAL: Comentado verificación de permisos
+    /*
     const relacion = await prisma.adminArtistaRelacion.findUnique({
       where: {
         adminId_artistaId: {
@@ -338,7 +344,8 @@ export async function cambiarEstadoRetiro(
         exito: false,
         mensaje: 'No tienes permisos para modificar este retiro'
       };
-    } */
+    }
+    */
 
     // Validar transición de estado
     const validacionTransicion = validarTransicionEstado(retiro.estado, nuevoEstado);
@@ -426,8 +433,9 @@ export async function rechazarRetiro(
       };
     }
 
-    // Verificar permisos
-/*     const relacion = await prisma.adminArtistaRelacion.findUnique({
+    // TEMPORAL: Comentado verificación de permisos
+    /*
+    const relacion = await prisma.adminArtistaRelacion.findUnique({
       where: {
         adminId_artistaId: {
           adminId: adminId,
@@ -441,7 +449,8 @@ export async function rechazarRetiro(
         exito: false,
         mensaje: 'No tienes permisos para modificar este retiro'
       };
-    } */
+    }
+    */
 
     // Validar transición
     const validacionTransicion = validarTransicionEstado(retiro.estado, 'Rechazado');
@@ -469,6 +478,15 @@ export async function rechazarRetiro(
           }
         }
       }
+    });
+
+    // Marcar alertas como resueltas
+    await prisma.alerta.updateMany({
+      where: { 
+        retiroId: retiroId,
+        resuelta: false
+      },
+      data: { resuelta: true }
     });
 
     return {
@@ -518,8 +536,9 @@ export async function completarRetiro(
       };
     }
 
-    // Verificar permisos
-/*     const relacion = await prisma.adminArtistaRelacion.findUnique({
+    // TEMPORAL: Comentado verificación de permisos
+    /*
+    const relacion = await prisma.adminArtistaRelacion.findUnique({
       where: {
         adminId_artistaId: {
           adminId: adminId,
@@ -533,7 +552,8 @@ export async function completarRetiro(
         exito: false,
         mensaje: 'No tienes permisos para modificar este retiro'
       };
-    } */
+    }
+    */
 
     // Validar que está en estado "Procesando"
     if (retiro.estado !== 'Procesando') {
@@ -559,6 +579,15 @@ export async function completarRetiro(
           }
         }
       }
+    });
+
+    // Marcar alertas como resueltas
+    await prisma.alerta.updateMany({
+      where: { 
+        retiroId: retiroId,
+        resuelta: false
+      },
+      data: { resuelta: true }
     });
 
     return {
@@ -617,8 +646,9 @@ export async function subirComprobante(
       };
     }
 
-    // Verificar que el admin tiene permisos
-/*     const relacion = await prisma.adminArtistaRelacion.findUnique({
+    // TEMPORAL: Comentado verificación de permisos
+    /*
+    const relacion = await prisma.adminArtistaRelacion.findUnique({
       where: {
         adminId_artistaId: {
           adminId: adminId,
@@ -632,7 +662,8 @@ export async function subirComprobante(
         exito: false,
         mensaje: 'No tienes permisos para subir comprobantes a este retiro'
       };
-    } */
+    }
+    */
 
     // Verificar que está en estado "Procesando"
     if (retiro.estado !== 'Procesando') {
@@ -658,7 +689,7 @@ export async function subirComprobante(
     await fs.writeFile(rutaArchivo, buffer);
 
     // URL pública del archivo
-    const urlComprobante = `uploads/comprobantes/${nombreArchivo}`;
+    const urlComprobante = `/uploads/comprobantes/${nombreArchivo}`;
 
     // Completar el retiro automáticamente
     const resultadoCompletar = await completarRetiro(retiroId, adminId, urlComprobante);
@@ -716,6 +747,9 @@ export async function obtenerRetiroPorId(
             tipoCuenta: true,
             nombreBanco: true
           }
+        },
+        alertas: {
+          orderBy: { createdAt: 'desc' }
         }
       }
     });
@@ -748,7 +782,9 @@ export async function obtenerRetiroPorId(
         };
       }
     } else if (usuario.rol === 'admin') {
-      // Los admins solo pueden ver retiros de sus artistas asignados
+      // TEMPORAL: Los admins pueden ver todos los retiros
+      // Cuando se habilite la relación admin-artista, descomentar:
+      /*
       const relacion = await prisma.adminArtistaRelacion.findUnique({
         where: {
           adminId_artistaId: {
@@ -764,6 +800,7 @@ export async function obtenerRetiroPorId(
           mensaje: 'No tienes permisos para ver este retiro'
         };
       }
+      */
     }
 
     return {
