@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
           nombreCompleto,
           email,
           passwordHash,
-          rol: 'artista',
+          rol: 'admin',
           requiereCambioPassword: true,
           estadoCuenta: 'Activa'
         }
