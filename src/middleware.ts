@@ -43,15 +43,11 @@ function getClientIp(request: NextRequest): string {
 function isValidOrigin(request: NextRequest): boolean {
   const origin = request.headers.get('origin')
   const referer = request.headers.get('referer')
-  
-  if (!origin && !referer) {
-    return true
-  }
-  
   const checkOrigin = origin || referer || ''
-  return SECURITY_CONFIG.allowedOrigins.some(allowed => 
+
+  return SECURITY_CONFIG.allowedOrigins.some(allowed =>
     checkOrigin.startsWith(allowed)
-  )
+  ) || (process.env.NODE_ENV !== 'production' && checkOrigin.includes('.devtunnels.ms'))
 }
 
 export async function middleware(request: NextRequest) {

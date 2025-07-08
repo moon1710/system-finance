@@ -4,8 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getIronSession } from 'iron-session';
 import { sessionOptions, SessionData } from '@/lib/session';
 import { crearSolicitudRetiro, obtenerRetirosUsuario } from '@/lib/services/retiros';
-import { enviarConfirmacionRetiro, enviarAlertaAdmin } from '@/lib/emailService'; // <-- Importa las funciones de email
-import { prisma } from '@/lib/db'; // <-- Necesario para obtener datos del artista
+import { enviarConfirmacionRetiro, enviarAlertaAdmin } from '@/lib/emailService';
+import { prisma } from '@/lib/db'; // Necesario para obtener datos del artista y de los administradores
 
 /**
  * GET /api/retiros
@@ -13,7 +13,6 @@ import { prisma } from '@/lib/db'; // <-- Necesario para obtener datos del artis
  */
 export async function GET(request: NextRequest) {
   try {
-    // Obtener sesión
     const session = await getIronSession<SessionData>(request, new NextResponse(), sessionOptions);
 
     if (!session.isLoggedIn || !session.userId) {
@@ -23,7 +22,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Solo artistas pueden ver sus retiros
     if (session.rol !== 'artista') {
       return NextResponse.json(
         { error: 'Solo los artistas pueden ver retiros' },
@@ -59,9 +57,8 @@ export async function GET(request: NextRequest) {
  * Crear nueva solicitud de retiro
  */
 export async function POST(request: NextRequest) {
-  const response = new NextResponse(); // Necesario para getIronSession en App Router
+  const response = new NextResponse();
   try {
-    // Obtener sesión
     const session = await getIronSession<SessionData>(request, response, sessionOptions);
 
     if (!session.isLoggedIn || !session.userId) {
@@ -71,7 +68,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Solo artistas pueden crear retiros
     if (session.rol !== 'artista') {
       return NextResponse.json(
         { error: 'Solo los artistas pueden solicitar retiros' },
@@ -79,10 +75,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Obtener datos del body
     const body = await request.json();
     
-    // Validar campos requeridos
     if (!body.monto || !body.cuentaId) {
       return NextResponse.json(
         { error: 'Monto y cuenta bancaria son requeridos' },
@@ -90,7 +84,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validar que monto sea número
     const monto = parseFloat(body.monto);
     if (isNaN(monto)) {
       return NextResponse.json(
@@ -99,7 +92,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Crear la solicitud
     const resultado = await crearSolicitudRetiro(
       session.userId,
       monto,
@@ -130,18 +122,25 @@ export async function POST(request: NextRequest) {
         await enviarConfirmacionRetiro(artista.email, monto);
         console.log(`[EMAIL] Confirmación de retiro enviada a artista: ${artista.email}`);
 
-        // Enviar alerta a administradores
-        // Asegúrate de definir ADMIN_EMAILS en tu .env (ej. "admin1@dominio.com,admin2@dominio.com")
-        const adminEmails = process.env.ADMIN_EMAILS || 'admin@tudominio.com'; // Fallback por si no está en .env
-        await enviarAlertaAdmin(adminEmails, artista.nombreCompleto, monto);
-        console.log(`[EMAIL] Alerta de retiro enviada a administradores: ${adminEmails}`);
+        // 2. Obtener los emails de TODOS los administradores de la base de datos
+        const admins = await prisma.usuario.findMany({
+          where: { rol: 'admin' },
+          select: { email: true }
+        });
+        const adminEmails = admins.map(admin => admin.email).join(','); // Une los emails con comas
+
+        if (adminEmails) {
+          // Enviar alerta a administradores
+          await enviarAlertaAdmin(adminEmails, artista.nombreCompleto, monto);
+          console.log(`[EMAIL] Alerta de retiro enviada a administradores: ${adminEmails}`);
+        } else {
+          console.warn(`[EMAIL WARN] No se encontraron administradores en la base de datos para enviar alertas de retiro.`);
+        }
       } else {
         console.warn(`[EMAIL WARN] No se encontró el artista con ID ${session.userId} para enviar notificaciones de retiro.`);
       }
     } catch (emailError) {
       console.error(`[EMAIL ERROR] Fallo al enviar notificaciones de retiro:`, emailError);
-      // La creación del retiro fue exitosa, el error es solo en la notificación.
-      // Puedes decidir si esto debe afectar la respuesta final o solo ser un log.
     }
     // --- Fin lógica de envío de emails ---
 
