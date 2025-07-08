@@ -18,6 +18,7 @@
     "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-slot": "^1.2.3",
     "@react-email/components": "^0.1.1",
+    "@sendgrid/mail": "^8.1.5",
     "@tailwindcss/cli": "^4.1.11",
     "@tailwindcss/vite": "^4.1.11",
     "bcryptjs": "^3.0.2",

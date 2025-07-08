@@ -1,67 +1,168 @@
-// app/api/admin/usuarios/route.ts
-import { NextResponse } from 'next/server';
-import { getIronSession } from 'iron-session';
+// src/app/api/admin/usuarios/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { prisma } from '@/lib/db';
+import { getIronSession } from 'iron-session';
 import { sessionOptions, SessionData } from '@/lib/session';
-import { hashPassword } from '@/lib/auth'; // Asegúrate de tener esta función
+import { generateTemporaryPassword, hashPassword } from '@/lib/auth';
+import { enviarEmailBienvenida } from '@/lib/emailService'; // <-- Importa la función de email
 
-export async function POST(request: Request) {
-  const response = new NextResponse();
+const createUserSchema = z.object({
+  nombreCompleto: z.string().min(3).max(100),
+  email: z.string().email().max(255),
+});
+
+// GET - Listar artistas del admin
+export async function GET(request: NextRequest) {
+  try {
+    const session = await getIronSession<SessionData>(request, NextResponse.next(), sessionOptions);
+    
+    if (!session.isLoggedIn || session.rol !== 'admin') {
+      return NextResponse.json(
+        { error: 'No autorizado' },
+        { status: 403 }
+      );
+    }
+    
+    // Obtener artistas asignados al admin
+    const artistas = await prisma.usuario.findMany({
+      where: {
+        rol: 'artista',
+        adminAsignado: {
+          some: {
+            adminId: session.userId
+          }
+        }
+      },
+      select: {
+        id: true,
+        nombreCompleto: true,
+        email: true,
+        estadoCuenta: true,
+        createdAt: true,
+        requiereCambioPassword: true,
+        _count: {
+          select: {
+            retiros: true,
+            cuentasBancarias: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+    
+    return NextResponse.json({
+      success: true,
+      artistas
+    });
+  } catch (error) {
+    console.error('Error listando usuarios:', error);
+    return NextResponse.json(
+      { error: 'Error al obtener usuarios' },
+      { status: 500 }
+    );
+  }
+}
+
+// POST - Crear nuevo artista
+export async function POST(request: NextRequest) {
+  // En App Router, `NextResponse.next()` se pasa como segundo argumento a `getIronSession`
+  const response = new NextResponse(); 
   const session = await getIronSession<SessionData>(request, response, sessionOptions);
 
-  // 1. Verificar autenticación y rol de admin
-  if (!session.isLoggedIn || session.rol !== 'admin') {
-    return NextResponse.json({ message: 'No autorizado' }, { status: 401 });
-  }
-
   try {
-    const { nombreCompleto, email, rol } = await request.json();
-
-    // Validaciones básicas
-    if (!nombreCompleto || !email || !rol) {
-      return NextResponse.json({ message: 'Nombre, email y rol son requeridos.' }, { status: 400 });
+    if (!session.isLoggedIn || session.rol !== 'admin') {
+      return NextResponse.json(
+        { error: 'No autorizado' },
+        { status: 403 }
+      );
     }
-    if (rol !== 'artista' && rol !== 'admin') {
-      return NextResponse.json({ message: 'Rol inválido. Debe ser "artista" o "admin".' }, { status: 400 });
-    }
-
-    // Generar una contraseña temporal (puedes hacerla más compleja)
-    const temporaryPassword = Math.random().toString(36).slice(-8); // Ejemplo: 8 caracteres alfanuméricos
-    const passwordHash = await hashPassword(temporaryPassword);
-
-    // 2. Crear el nuevo usuario
-    const nuevoUsuario = await prisma.usuario.create({
-      data: {
-        nombreCompleto,
-        email,
-        passwordHash,
-        rol,
-        estadoCuenta: 'Activa', // Por defecto, activo
-        requiereCambioPassword: true, // ¡Importante! Forzar cambio de contraseña
-      },
+    
+    const body = await request.json();
+    const { nombreCompleto, email } = createUserSchema.parse(body);
+    
+    // Verificar si el email ya existe
+    const existingUser = await prisma.usuario.findUnique({
+      where: { email }
     });
-
-    // En un sistema real, aquí enviarías un email al nuevo usuario
-    // con su correo y la contraseña temporal, y la URL de login.
-    console.log(`Usuario creado: ${nuevoUsuario.email}, Contraseña temporal: ${temporaryPassword}`);
-
+    
+    if (existingUser) {
+      return NextResponse.json(
+        { error: 'El correo ya está registrado' },
+        { status: 400 }
+      );
+    }
+    
+    // Generar contraseña temporal
+    const tempPassword = generateTemporaryPassword();
+    const passwordHash = await hashPassword(tempPassword);
+    
+    // Crear usuario y relación en una transacción
+    const usuario = await prisma.$transaction(async (tx) => {
+      // Crear artista
+      const newUser = await tx.usuario.create({
+        data: {
+          nombreCompleto,
+          email,
+          passwordHash,
+          rol: 'artista',
+          requiereCambioPassword: true,
+          estadoCuenta: 'Activa'
+        }
+      });
+      
+      // Crear relación admin-artista
+      await tx.adminArtistaRelacion.create({
+        data: {
+          adminId: session.userId,
+          artistaId: newUser.id
+        }
+      });
+      
+      return newUser;
+    });
+    
+    // Log de auditoría
+    console.log(`[AUDIT] Admin ${session.userId} creó artista ${usuario.id}`);
+    
+    // TODO: Enviar email con credenciales cuando esté configurado
+    // ¡Aquí se envía el email de bienvenida!
+    try {
+      await enviarEmailBienvenida(email, tempPassword);
+      console.log(`[EMAIL] Email de bienvenida con credenciales temporales enviado a: ${email}`);
+    } catch (emailError) {
+      console.error(`[EMAIL ERROR] Fallo al enviar email de bienvenida a ${email}:`, emailError);
+      // Decide cómo manejar este error:
+      // 1. Podrías devolver un status 500 para indicar un fallo completo.
+      // 2. O, como está ahora, loguearlo y continuar, asumiendo que la creación del usuario es más crítica que la notificación.
+      // La implementación actual no detiene la respuesta exitosa al frontend si el email falla.
+    }
+    
     return NextResponse.json({
-      message: 'Usuario creado exitosamente. Se ha establecido una contraseña temporal y se requiere un cambio.',
-      user: {
-        id: nuevoUsuario.id,
-        nombreCompleto: nuevoUsuario.nombreCompleto,
-        email: nuevoUsuario.email,
-        rol: nuevoUsuario.rol,
-        requiereCambioPassword: nuevoUsuario.requiereCambioPassword,
-      }
+      success: true,
+      message: 'Artista creado exitosamente. Se ha enviado un email con las credenciales temporales.',
+      usuario: {
+        id: usuario.id,
+        email: usuario.email,
+        nombreCompleto: usuario.nombreCompleto
+      },
+      // En desarrollo, devolver la contraseña temporal (asegúrate de QUITAR ESTO EN PRODUCCIÓN)
+      ...(process.env.NODE_ENV === 'development' && { tempPassword })
     }, { status: 201 });
 
   } catch (error: any) {
-    // Manejo de errores, por ejemplo, si el email ya existe (@unique)
-    if (error.code === 'P2002' && error.meta?.target?.includes('email')) {
-      return NextResponse.json({ message: 'El email ya está registrado.' }, { status: 409 });
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: error.errors }, { status: 400 });
     }
-    console.error('Error al crear usuario:', error);
-    return NextResponse.json({ message: 'Error interno del servidor al crear usuario.' }, { status: 500 });
+    if (error.code === 'P2002' && error.meta?.target?.includes('email')) {
+      return NextResponse.json({ error: 'El correo ya está registrado.' }, { status: 409 });
+    }
+    console.error('Error creando usuario:', error);
+    return NextResponse.json(
+      { error: 'Error interno del servidor al crear usuario.' },
+      { status: 500 }
+    );
   }
 }
