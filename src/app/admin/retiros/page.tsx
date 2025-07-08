@@ -1,6 +1,8 @@
+// app/admin/retiros/page.tsx
+
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react' // Agregado useCallback
 import { useRouter } from 'next/navigation'
 
 interface Alerta {
@@ -33,13 +35,58 @@ interface Solicitud {
 interface Estadisticas {
     total: number
     pendientes: number
-    procesando: number
+    procesando: number // Esta propiedad no está en tu JSON de Network. Se inicializará en 0.
     completados: number
-    rechazados: number
+    rechazados: number // Esta propiedad no está en tu JSON de Network. Se inicializará en 0.
     conAlertas: number
-    montoTotalPendiente: number
-    montoTotalCompletado: number
+    montoTotalPendiente: number // Esta propiedad no está en tu JSON de Network. Se calculará.
+    montoTotalCompletado: number // Esta propiedad no está en tu JSON de Network. Se calculará.
 }
+
+// Interfaces para la respuesta de la API (para un mejor tipado y claridad)
+interface RetiroAPI {
+    id: string
+    usuarioId: string
+    cuentaBancariaId: string
+    montoSolicitado: string
+    estado: 'Pendiente' | 'Procesando' | 'Completado' | 'Rechazado'
+    urlComprobante: string | null
+    notasAdmin: string | null
+    fechaSolicitud: string
+    fechaActualizacion: string
+    usuario: {
+        id: string
+        nombreCompleto: string
+        email: string
+    }
+    cuentaBancaria: {
+        tipoCuenta: string
+        nombreTitular: string
+    }
+    alertas: {
+        id: string
+        retiroId: string
+        tipo: string
+        mensaje: string
+        resuelta: boolean
+        createdAt: string
+        updatedAt: string
+    }[]
+}
+
+interface StatsAPI {
+    total: number
+    pendientes: number
+    conAlertas: number
+    requierenRevision: number
+}
+
+interface RetirosAPIResponse {
+    success: boolean
+    retiros: RetiroAPI[]
+    stats: StatsAPI
+}
+
 
 export default function AdminRetirosPage() {
     const [solicitudes, setSolicitudes] = useState<Solicitud[]>([])
@@ -55,12 +102,8 @@ export default function AdminRetirosPage() {
     const [submitLoading, setSubmitLoading] = useState(false)
     const router = useRouter()
 
-    useEffect(() => {
-        console.log('Componente montado, fetchSolicitudes...')
-        fetchSolicitudes()
-    }, [filtroEstado, soloAlertas])
-
-    const fetchSolicitudes = async () => {
+    // Usar useCallback para memoizar fetchSolicitudes y evitar re-renders innecesarios en useEffect
+    const fetchSolicitudes = useCallback(async () => {
         try {
             setLoading(true)
             const params = new URLSearchParams()
@@ -69,26 +112,80 @@ export default function AdminRetirosPage() {
 
             console.log('Fetching con params:', params.toString())
             const res = await fetch(`/api/admin/retiros?${params}`)
-            
+
             if (!res.ok) {
                 console.error('Error response:', res.status)
                 if (res.status === 401) router.push('/login')
                 return
             }
-            
-            const data = await res.json()
+
+            const data: RetirosAPIResponse = await res.json()
             console.log('Data recibida:', data)
-            console.log('Solicitudes:', data.solicitudes)
-            console.log('Estadísticas:', data.estadisticas)
-            
-            setSolicitudes(data.solicitudes || [])
-            setEstadisticas(data.estadisticas || null)
+            // console.log('Solicitudes:', data.solicitudes) // Eliminar o comentar esta línea
+            // console.log('Estadísticas:', data.estadisticas) // Eliminar o comentar esta línea
+
+            // Mapeo de los datos de retiros al formato de Solicitud
+            const mappedSolicitudes: Solicitud[] = data.retiros.map(retiro => ({
+                id: retiro.id,
+                montoSolicitado: parseFloat(retiro.montoSolicitado), // Convertir a number
+                estado: retiro.estado,
+                fechaSolicitud: retiro.fechaSolicitud,
+                fechaActualizacion: retiro.fechaActualizacion,
+                notasAdmin: retiro.notasAdmin || undefined,
+                urlComprobante: retiro.urlComprobante || undefined,
+                usuario: {
+                    nombreCompleto: retiro.usuario.nombreCompleto,
+                    email: retiro.usuario.email,
+                },
+                cuentaBancaria: {
+                    tipoCuenta: retiro.cuentaBancaria.tipoCuenta,
+                    nombreTitular: retiro.cuentaBancaria.nombreTitular,
+                },
+                alertas: retiro.alertas.map(alerta => ({
+                    id: alerta.id,
+                    tipo: alerta.tipo,
+                    mensaje: alerta.mensaje,
+                    resuelta: alerta.resuelta,
+                })),
+            }));
+
+            // Aplicar el filtro 'soloAlertas' después del mapeo, si es necesario
+            const filteredSolicitudes = soloAlertas
+                ? mappedSolicitudes.filter(sol => sol.alertas && sol.alertas.length > 0)
+                : mappedSolicitudes;
+
+            setSolicitudes(filteredSolicitudes);
+
+            // Calcular las estadísticas con los datos recibidos (data.stats) y los retiros mapeados
+            const stats: Estadisticas = {
+                total: data.stats.total,
+                pendientes: data.stats.pendientes,
+                conAlertas: data.stats.conAlertas,
+
+                // Calcular las propiedades faltantes desde los retiros mapeados
+                procesando: mappedSolicitudes.filter(s => s.estado === 'Procesando').length,
+                completados: mappedSolicitudes.filter(s => s.estado === 'Completado').length,
+                rechazados: mappedSolicitudes.filter(s => s.estado === 'Rechazado').length,
+                montoTotalPendiente: mappedSolicitudes
+                    .filter(s => s.estado === 'Pendiente')
+                    .reduce((sum, s) => sum + parseFloat(String(s.montoSolicitado)), 0),
+                montoTotalCompletado: mappedSolicitudes
+                    .filter(s => s.estado === 'Completado')
+                    .reduce((sum, s) => sum + parseFloat(String(s.montoSolicitado)), 0),
+            };
+            setEstadisticas(stats);
+
         } catch (error) {
             console.error('Error al obtener solicitudes:', error)
         } finally {
             setLoading(false)
         }
-    }
+    }, [filtroEstado, soloAlertas, router]) // Dependencias para useCallback
+
+    useEffect(() => {
+        console.log('Componente montado, fetchSolicitudes...')
+        fetchSolicitudes()
+    }, [fetchSolicitudes]) // Dependencia: fetchSolicitudes (que ya es useCallback)
 
     const aprobarRetiro = async (retiroId: string) => {
         if (!confirm('¿Estás seguro de aprobar este retiro?')) return
@@ -233,11 +330,10 @@ export default function AdminRetirosPage() {
                 <div className="flex space-x-2">
                     <button
                         onClick={() => setSoloAlertas(!soloAlertas)}
-                        className={`px-4 py-2 rounded text-sm font-medium ${
-                            soloAlertas
+                        className={`px-4 py-2 rounded text-sm font-medium ${soloAlertas
                                 ? 'bg-red-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                        }`}
+                            }`}
                     >
                         {soloAlertas ? '🚨 Mostrando Alertas' : 'Ver Solo Alertas'}
                     </button>
@@ -382,13 +478,12 @@ export default function AdminRetirosPage() {
                                                 <div className="space-y-1">
                                                     {solicitud.alertas.map((alerta) => (
                                                         <div key={alerta.id} className="text-xs">
-                                                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                                                                alerta.tipo === 'MONTO_ALTO'
+                                                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${alerta.tipo === 'MONTO_ALTO'
                                                                     ? 'bg-red-100 text-red-800'
                                                                     : alerta.tipo === 'RETIROS_MULTIPLES'
-                                                                    ? 'bg-orange-100 text-orange-800'
-                                                                    : 'bg-yellow-100 text-yellow-800'
-                                                            }`}>
+                                                                        ? 'bg-orange-100 text-orange-800'
+                                                                        : 'bg-yellow-100 text-yellow-800'
+                                                                }`}>
                                                                 {alerta.tipo === 'MONTO_ALTO' && '💰'}
                                                                 {alerta.tipo === 'RETIROS_MULTIPLES' && '🔄'}
                                                                 {alerta.tipo === 'CUENTA_NUEVA' && '🆕'}
@@ -440,7 +535,7 @@ export default function AdminRetirosPage() {
                                             )}
                                             {solicitud.estado === 'Completado' && solicitud.urlComprobante && (
                                                 <a
-                                                    href={`/api/retiros/${solicitud.id}/comprobante`}
+                                                    href={`/api/retiros/${solicitud.id}/comprobante`} // Ajusta la ruta de tu API para servir el comprobante
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="text-blue-600 hover:text-blue-900"
