@@ -26,6 +26,7 @@ const SECURITY_HEADERS = {
 
 // Rutas públicas (mínimas necesarias)
 const PUBLIC_ROUTES = [
+  '/',
   '/login',
   '/api/auth/login',
   '/api/auth/forgot-password',

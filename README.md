@@ -38,3 +38,44 @@ Node.js (v18.17 o superior)
 NPM o Yarn
 
 Una instancia de MySQL en ejecución.
+
+##colores
+/* CSS HEX */
+ --shark: #21252d;
+--outer-space: #2b333c;
+--blue-violet: #6762b3;
+--wild-sand: #f7f7f7;
+--empress: #7c777a;
+--cornflower-blue: #527ceb;
+--cerulean: #019fd2;
+--picton-blue: #48b0f7;
+--bright-turquoise: #10cfbd;
+--gallery: #f0f0f0;
+
+
+/* SCSS HEX */
+$shark: #21252d;
+$outer-space: #2b333c;
+$blue-violet: #6762b3;
+$wild-sand: #f7f7f7;
+$empress: #7c777a;
+$cornflower-blue: #527ceb;
+$cerulean: #019fd2;
+$picton-blue: #48b0f7;
+$bright-turquoise: #10cfbd;
+$gallery: #f0f0f0;
+
+
+/* SCSS RGB */
+--shark: rgba(33,37,45,255,1);
+--outer-space: rgba(43,51,60,1);
+--blue-violet: rgba(103,98,179,1);
+--wild-sand: rgba(247,247,247,1);
+--empress: rgba(124,119,122,1);
+--cornflower-blue: rgba(82,124,235,255,1);
+--cerulean: rgba(1,159,210,255,1);
+--picton-blue: rgba(72,176,247,255,1);
+--bright-turquoise: rgba(16,207,189,255,1);
+--gallery: rgba(240,240,240,255,1);
+
+
