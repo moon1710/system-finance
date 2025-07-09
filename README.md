@@ -1,36 +1,40 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+Sistema de Gestión de Pagos 💸
+Una aplicación web full-stack construida con Next.js 14 (App Router) y Prisma para gestionar de forma eficiente las solicitudes de pago de artistas. Incluye un panel de administración para la revisión, aprobación, y seguimiento de transacciones, junto a un sistema de alertas configurable.
 
-## Getting Started
+✨ Características Principales
+Autenticación por Roles: Sistema de sesión seguro con Iron Session que diferencia entre roles de admin y artista.
 
-First, run the development server:
+Gestión de Cuentas Bancarias: CRUD completo para que los artistas gestionen sus métodos de pago (Nacional, Internacional, PayPal).
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Flujo de Retiros Completo: Desde la solicitud del artista hasta la aprobación y carga de comprobante por parte del administrador.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Sistema de Alertas Avanzado: Motor de alertas configurable que notifica a los administradores sobre transacciones de alto riesgo o inusuales (ej. montos altos, alta frecuencia).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Dashboard de Administración: Paneles centralizados para que los administradores gestionen usuarios, retiros y alertas de manera eficiente.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Almacenamiento Seguro: Subida y gestión de archivos (comprobantes de pago) en el sistema de archivos local de forma segura.
 
-## Learn More
+Base de Datos Tipada: Uso de Prisma como ORM para garantizar la seguridad de tipos de extremo a extremo entre la base de datos MySQL y la aplicación.
 
-To learn more about Next.js, take a look at the following resources:
+🛠️ Stack Tecnológico
+Framework: Next.js 14+ (App Router)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Lenguaje: TypeScript
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+ORM: Prisma
 
-## Deploy on Vercel
+Base de Datos: MySQL
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Autenticación: Iron Session
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Validaciones: Zod (implícito en las validaciones de datos)
+
+🚀 Puesta en Marcha
+Sigue estos pasos para configurar y ejecutar el proyecto en tu entorno local.
+
+1. Prerrequisitos
+Node.js (v18.17 o superior)
+
+NPM o Yarn
+
+Una instancia de MySQL en ejecución.
