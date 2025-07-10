@@ -47,9 +47,9 @@ export default function LoginPage() {
             {/* Sección izquierda - Login */}
             <section className="flex items-center justify-center px-6 py-10 bg-white">
                 <div className="w-full max-w-md">
-                    <h1 className="text-3xl font-bold text-[#21252d] mb-2">This is where incredible experiences start.</h1>
+                    <h1 className="text-3xl font-bold text-[#21252d] mb-2">Tu centro de control para finanzas y pagos.</h1>
                     <p className="text-sm text-[#7c777a] mb-6">
-                        More than Thousand Locations for customized just for you. You can start now for start your journey.
+                        Ingresa tus credenciales para gestionar tus retiros.
                     </p>
 
                     {error && <p className="mb-4 text-sm text-red-600 bg-red-100 rounded-xl px-4 py-2">{error}</p>}
@@ -74,7 +74,7 @@ export default function LoginPage() {
                                 required
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                placeholder="Password"
+                                placeholder="Contraseña"
                                 className="w-full rounded-xl border border-[#e1e1e1] bg-[#f7f7f7] py-3 pl-10 pr-4 text-[#21252d] placeholder:text-[#7c777a] focus:ring-2 focus:ring-[#527ceb] outline-none"
                             />
                         </div>
@@ -84,14 +84,15 @@ export default function LoginPage() {
                             disabled={loading}
                             className="w-full bg-[#527ceb] text-white rounded-xl py-3 font-semibold hover:bg-[#48b0f7] transition-all"
                         >
-                            {loading ? 'Cargando...' : 'Start Journey'}
+                            {loading ? 'Cargando...' : 'Iniciar Sesión'}
                         </button>
                     </form>
 
                     <p className="mt-4 text-sm text-center text-[#7c777a]">
-                        Have an account?{' '}
+                        Olvidaste tu contraseña?{' '}
                         <a href="#" className="underline text-[#527ceb]">
-                            Login now!
+                            {/* Cambiar  # por que esto mande un correo para soporte */}
+                            Recuperala
                         </a>
                     </p>
                 </div>
@@ -107,20 +108,18 @@ export default function LoginPage() {
             >
                 <div className="flex justify-end">
                     <div className="bg-white text-[#21252d] px-4 py-2 rounded-full shadow-md text-sm font-semibold">
-                        +89% Positive respond from people
+                        Pagos Seguros y Verificados
                     </div>
                 </div>
 
                 <div className="text-center px-4 mb-8">
-                    <h2 className="text-3xl font-bold mb-2 text-white">We are a Family</h2>
+                    <h2 className="text-3xl font-bold mb-2 text-white">Claridad en tus Ganancias</h2>
+                    {/* Conecta tus cuentas, consulta tus saldos en tiempo real y solicita tus pagos con la confianza de que tu dinero está protegido. */}
                     <p className="text-sm text-white/90 max-w-md mx-auto mb-4">
-                        In camp we have a lot people with different life story that help you feel more better in trip
+                        Conecta tus cuentas y solicita tus pagos con la confianza de que tu dinero está protegido.
                     </p>
-                    <div className="flex justify-center flex-wrap gap-2 text-xs font-semibold">
-                        <span className="bg-[#10cfbd] text-black px-3 py-1 rounded-full">#Trippel_Trip</span>
-                        <span className="bg-[#019fd2] text-white px-3 py-1 rounded-full">#Trippel</span>
-                        <span className="bg-[#527ceb] text-white px-3 py-1 rounded-full">#Be_happy</span>
-                        <span className="bg-white text-[#21252d] px-3 py-1 rounded-full">#Be_strong</span>
+                    <div className="flex justify-center flex-wrap gap-2 text-sm font-semibold">
+                        <span className="bg-[#527ceb] text-white px-4 py-2 rounded-full">Tu talento merece ser bien gestionado</span>
                     </div>
                 </div>
             </section>

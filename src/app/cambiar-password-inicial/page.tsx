@@ -104,7 +104,7 @@ export default function CambiarPasswordInicial() {
                 <div className="max-w-md text-[#2b333c]">
                     <h2 className="text-4xl font-bold mb-4">Seguridad ante todo</h2>
                     <p className="text-lg">
-                        Establece una contraseña segura para mantener protegida tu cuenta y continuar con tus proyectos creativos.
+                        Establece una contraseña segura para mantener protegida tu cuenta.
                     </p>
                 </div>
             </section>

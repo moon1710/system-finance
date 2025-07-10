@@ -60,7 +60,7 @@ export default function LandingPage() {
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-4">Visibilidad total de tus finanzas</h3>
                 <p className="text-gray-600 leading-relaxed">
-                  Accede a un historial detallado de tus ganancias, consulta tu saldo en tiempo real y revisa el estado
+                  Accede a un historial detallado de tus ganancias y revisa el estado
                   de cada una de tus solicitudes de retiro sin sorpresas.
                 </p>
               </CardContent>
