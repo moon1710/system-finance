@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { CheckCircle2 } from 'lucide-react'
+import { CheckCircle2 , Eye, EyeOff} from 'lucide-react'
 import confetti from 'canvas-confetti'
 import background from '../login/bg.png' // cambia la ruta si es diferente
 
@@ -15,6 +15,8 @@ export default function CambiarPasswordInicial() {
     const [loading, setLoading] = useState(false)
     const [showConfetti, setShowConfetti] = useState(false)
     const router = useRouter()
+    const [showPassword, setShowPassword] = useState(false)
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -135,26 +137,44 @@ export default function CambiarPasswordInicial() {
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
                             <label className="block text-sm font-medium mb-1">Nueva contraseña</label>
-                            <input
-                                type="password"
-                                value={newPassword}
-                                onChange={(e) => setNewPassword(e.target.value)}
-                                required
-                                min={8}
-                                className="w-full rounded-xl border border-[#ccc] bg-[#f7f7f7] py-3 px-4 text-[#21252d] placeholder:text-[#999] focus:ring-2 focus:ring-[#527ceb] outline-none"
-                            />
+                            <div className="relative">
+                                <input
+                                    type={showPassword ? 'text' : 'password'}
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    required
+                                    min={8}
+                                    className="w-full rounded-xl border border-[#ccc] bg-[#f7f7f7] py-3 px-4 pr-10 text-[#21252d] placeholder:text-[#999] focus:ring-2 focus:ring-[#527ceb] outline-none"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#7c777a] hover:text-[#527ceb] transition-colors"
+                                >
+                                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                </button>
+                            </div>
                         </div>
 
                         <div>
                             <label className="block text-sm font-medium mb-1">Confirmar contraseña</label>
-                            <input
-                                type="password"
-                                value={confirmPassword}
-                                onChange={(e) => setConfirmPassword(e.target.value)}
-                                required
-                                min={8}
-                                className="w-full rounded-xl border border-[#ccc] bg-[#f7f7f7] py-3 px-4 text-[#21252d] placeholder:text-[#999] focus:ring-2 focus:ring-[#527ceb] outline-none"
-                            />
+                            <div className="relative">
+                                <input
+                                    type={showConfirmPassword ? 'text' : 'password'}
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    required
+                                    min={8}
+                                    className="w-full rounded-xl border border-[#ccc] bg-[#f7f7f7] py-3 px-4 pr-10 text-[#21252d] placeholder:text-[#999] focus:ring-2 focus:ring-[#527ceb] outline-none"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#7c777a] hover:text-[#527ceb] transition-colors"
+                                >
+                                    {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                </button>
+                            </div>
                         </div>
 
                         <button
