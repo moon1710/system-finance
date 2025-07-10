@@ -18,8 +18,8 @@ export default function LandingPage() {
         />
         <div className="relative z-10 text-center max-w-4xl mx-auto px-6">
           <p className="text-sm text-gray-600 mb-8 font-medium">creator's wallet</p>
-          <h1 className="text-5xl md:text-7xl font-bold text-black mb-6 leading-tight">
-            El control de tus pagos, simplificado.
+          <h1 className="text-5xl text-transform: uppercase md:text-7xl font-bold text-black mb-6 leading-tight">
+            El control de tus pagos simplificado.
           </h1>
           <p className="text-lg text-gray-700 mb-8 max-w-2xl mx-auto leading-relaxed">
             La plataforma exclusiva para artistas donde gestionas tus finanzas y retiras tus ganancias con total
