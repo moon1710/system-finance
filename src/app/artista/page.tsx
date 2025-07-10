@@ -8,7 +8,7 @@ import Link from 'next/link'
 export default function ArtistDashboard() {
     const [user, setUser] = useState<any>(null)
     const [loadingAuth, setLoadingAuth] = useState(true); // Nuevo estado para controlar la carga de autenticación
-    const router = useRouter()
+    const router = useRouter()  
 
 
     useEffect(() => {
