@@ -19,6 +19,7 @@ interface SidebarProps {
     nombreCompleto: string
     email?: string
   }
+  onLogout: () => void // <--- NUEVO: función recibida desde el layout
 }
 
 interface MenuItemProps {
@@ -28,7 +29,7 @@ interface MenuItemProps {
   isActive?: boolean
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ user }) => {
+const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const pathname = usePathname()
@@ -78,7 +79,6 @@ const Sidebar: React.FC<SidebarProps> = ({ user }) => {
         lg:relative lg:translate-x-0
         ${isCollapsed ? '-translate-x-full lg:translate-x-0' : 'translate-x-0'}
       `}>
-
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           {!isCollapsed && (
@@ -119,7 +119,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user }) => {
 
           {/* Dropdown Menu */}
           {showUserMenu && !isCollapsed && (
-            <div className="mt-2 py-2 bg-gray-50 rounded-lg">
+            <div className="mt-2 py-2 bg-gray-50 rounded-lg shadow">
               <Link
                 href="/artista/perfil"
                 className="flex items-center px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded"
@@ -135,10 +135,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user }) => {
                 Notificaciones
               </Link>
               <button
-                onClick={() => {
-                  // Lógica de logout
-                  window.location.href = '/api/auth/logout'
-                }}
+                onClick={onLogout} // <-- Aquí el logout es seguro y limpio
                 className="flex items-center w-full px-3 py-2 text-sm text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
               >
                 <LogOut className="h-4 w-4 mr-2" />
