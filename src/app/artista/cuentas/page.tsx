@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { CompactTable } from '@table-library/react-table-library/compact'
+import { FaPlus, FaEdit, FaTrash, FaStar, FaRegStar } from 'react-icons/fa'
 
 interface CuentaBancaria {
     id: string
@@ -35,7 +37,6 @@ export default function CuentasPage() {
     })
     const router = useRouter()
 
-    // Cargar cuentas
     useEffect(() => {
         fetchCuentas()
     }, [])
@@ -304,111 +305,161 @@ export default function CuentasPage() {
         }
     }
 
-    if (loading) return <div className="p-8">Cargando...</div>
+//v2 empieza aca
+
+    // ----------------- TABLE COLUMNS DEFINITION -------------------
+    const columns = [
+        {
+            label: '',
+            pinLeft: true,
+            renderCell: (item: CuentaBancaria) =>
+                item.esPredeterminada ? (
+                    <FaStar className="text-yellow-400" title="Predeterminada" />
+                ) : (
+                    <FaRegStar className="text-gray-400" title="Secundaria" />
+                ),
+        },
+        {
+            label: 'Tipo',
+            renderCell: (item: CuentaBancaria) => (
+                <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 capitalize">
+                    {item.tipoCuenta}
+                </span>
+            ),
+        },
+        {
+            label: 'Información',
+            renderCell: (item: CuentaBancaria) => formatCuentaInfo(item),
+        },
+        {
+            label: 'Titular',
+            renderCell: (item: CuentaBancaria) => item.nombreTitular,
+        },
+        {
+            label: 'Acciones',
+            renderCell: (item: CuentaBancaria) => (
+                <div className="flex items-center gap-3">
+                    <button
+                        title="Editar"
+                        className="p-1 rounded hover:bg-blue-50"
+                        onClick={() => handleEdit(item)}
+                    >
+                        <FaEdit className="text-blue-600" />
+                    </button>
+                    {!item.esPredeterminada && (
+                        <button
+                            title="Hacer predeterminada"
+                            className="p-1 rounded hover:bg-green-50"
+                            onClick={() => handleSetDefault(item.id)}
+                        >
+                            <FaStar className="text-green-600" />
+                        </button>
+                    )}
+                    <button
+                        title="Eliminar"
+                        className="p-1 rounded hover:bg-red-50"
+                        onClick={() => handleDelete(item.id)}
+                    >
+                        <FaTrash className="text-red-500" />
+                    </button>
+                </div>
+            ),
+        },
+    ]
+    //v2 termina aca
+
+    if (loading)
+        return (
+            <div className="p-8 min-h-[70vh] flex items-center justify-center text-lg text-gray-500">
+                Cargando...
+            </div>
+        )
 
     return (
-        <div className="p-8">
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold">Mis Cuentas Bancarias</h1>
+        <div className="p-6 md:p-10 bg-[#f6f8fa] min-h-screen">
+            {/* Topbar + Header */}
+            <div className="flex justify-between items-center mb-8">
+                <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">
+                    Mis Cuentas Bancarias
+                </h1>
                 <button
                     onClick={() => {
                         resetForm()
                         setShowModal(true)
                     }}
-                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                    className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2 rounded-2xl font-medium shadow hover:bg-blue-700 transition-all"
                 >
-                    + Agregar Cuenta
+                    <FaPlus className="text-lg" /> Agregar Cuenta
                 </button>
             </div>
 
-            {/* Lista de cuentas */}
-            <div className="bg-white rounded-lg shadow overflow-hidden">
+            {/* Card container */}
+            <div className="bg-white/60 backdrop-blur-lg rounded-3xl shadow-lg p-6 md:p-8">
+                {/* Tabla elegante */}
                 {cuentas.length === 0 ? (
-                    <div className="p-8 text-center text-gray-500">
-                        No tienes cuentas bancarias registradas.
-                        <br />
+                    <div className="p-10 text-center text-gray-400">
+                        No tienes cuentas bancarias registradas.<br />
                         Agrega una cuenta para poder solicitar retiros.
                     </div>
                 ) : (
-                    <table className="min-w-full">
-                        <thead className="bg-gray-50">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Tipo
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Información
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Titular
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Estado
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Acciones
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {cuentas.map((cuenta) => (
-                                <tr key={cuenta.id}>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                                            {cuenta.tipoCuenta}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        {formatCuentaInfo(cuenta)}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        {cuenta.nombreTitular}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        {cuenta.esPredeterminada ? (
-                                            <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                                                Predeterminada
-                                            </span>
-                                        ) : (
-                                            <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
-                                                Secundaria
-                                            </span>
-                                        )}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap space-x-2">
-                                        <button
-                                            onClick={() => handleEdit(cuenta)}
-                                            className="text-blue-600 hover:text-blue-900 text-sm"
-                                        >
-                                            Editar
-                                        </button>
-                                        {!cuenta.esPredeterminada && (
-                                            <button
-                                                onClick={() => handleSetDefault(cuenta.id)}
-                                                className="text-green-600 hover:text-green-900 text-sm"
-                                            >
-                                                Predeterminada
-                                            </button>
-                                        )}
-                                        <button
-                                            onClick={() => handleDelete(cuenta.id)}
-                                            className="text-red-600 hover:text-red-900 text-sm"
-                                        >
-                                            Eliminar
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                    <div className="overflow-x-auto">
+                        <CompactTable
+                            columns={columns}
+                            data={{ nodes: cuentas }}
+                            theme={{
+                                // Colores modernos y borders suaves
+                                BaseRow: `
+                  border-bottom: 1px solid #edf0f3;
+                  &:last-child { border-bottom: none; }
+                  font-size: 1rem;
+                  background: rgba(255,255,255,0.65);
+                  backdrop-filter: blur(2px);
+                  transition: background 0.2s;
+                  &:hover { background: rgba(82,124,235,0.07); }
+                `,
+                                Table: `
+                  --tw-shadow: 0 8px 32px 0 rgba(60,60,80,0.07);
+                  background: none;
+                  box-shadow: none;
+                  border-radius: 1.5rem;
+                `,
+                                HeaderRow: `
+                  background: transparent;
+                  font-size: 0.92rem;
+                  font-weight: 700;
+                  color: #21252d;
+                `,
+                                HeaderCell: `
+                  padding: 1rem 0.75rem;
+                  text-align: left;
+                  border-bottom: 2px solid #f0f2f6;
+                  background: transparent;
+                `,
+                                Cell: `
+                  padding: 1rem 0.75rem;
+                  background: transparent;
+                `,
+                            }}
+                        />
+                    </div>
                 )}
             </div>
 
-            {/* Modal para crear/editar cuenta */}
+            {/* Modal de cuenta */}
             {showModal && (
-                <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-96 overflow-y-auto">
-                        <h2 className="text-lg font-bold mb-4">
+                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 animate-fadeIn">
+                    <div className="bg-white rounded-3xl p-8 w-full max-w-lg shadow-2xl relative border border-gray-100">
+                        <button
+                            className="absolute right-5 top-5 text-2xl text-gray-400 hover:text-gray-800"
+                            onClick={() => {
+                                setShowModal(false)
+                                resetForm()
+                            }}
+                            title="Cerrar"
+                        >
+                            ×
+                        </button>
+                        <h2 className="text-xl font-bold mb-4">
                             {editingCuenta ? 'Editar Cuenta' : 'Agregar Nueva Cuenta'}
                         </h2>
                         <form onSubmit={handleSubmit}>
