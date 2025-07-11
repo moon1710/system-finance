@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Importa aquí tu CSS de sidebar */
+.animate-fadeIn { animation: fadeIn .2s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-8px);} to { opacity: 1; transform: none; } }
+
+
 body {
   font-family: Arial, Helvetica, sans-serif;
   --sb-track-color: #232E33;
@@ -115,4 +120,394 @@ body::-webkit-scrollbar-thumb {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+
+/* =================================================================
+   SIDEBAR PROFESIONAL - CSS AVANZADO CON ANIMACIONES
+   ================================================================= */
+
+/* Variables CSS para consistencia */
+:root {
+  --sidebar-width: 280px;
+  --sidebar-collapsed: 80px;
+  --sidebar-bg: #1e293b;
+  --sidebar-bg-secondary: #334155;
+  --sidebar-border: #475569;
+  --sidebar-text: #cbd5e1;
+  --sidebar-text-secondary: #94a3b8;
+  --sidebar-hover: #3b82f6;
+  --sidebar-active: #2563eb;
+  --sidebar-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+  --transition-speed: 300ms;
+  --transition-timing: cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+/* =================================================================
+   FIXES ESPECÍFICOS PARA PROBLEMAS DE INTERACTIVIDAD
+   ================================================================= */
+
+/* Fix crítico: Asegurar que el botón toggle siempre sea clickeable */
+.sidebar-toggle {
+  position: relative !important;
+  z-index: 1001 !important;
+  pointer-events: auto !important;
+  display: flex !important;
+  min-width: 2rem;
+  min-height: 2rem;
+}
+
+/* Prevenir que otros elementos interfieran con el botón */
+.sidebar-header {
+  position: relative;
+  z-index: 1000;
+}
+
+.sidebar-header * {
+  pointer-events: auto;
+}
+
+/* Fix para overflow que puede ocultar el botón */
+.sidebar {
+  overflow: visible;
+}
+
+.sidebar-nav {
+  overflow-y: auto;
+  overflow-x: visible;
+}
+
+/* =================================================================
+   ANIMACIONES MEJORADAS Y MICRO-INTERACCIONES
+   ================================================================= */
+
+/* Animación de entrada suave para el sidebar */
+.sidebar {
+  animation: slideInSidebar 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes slideInSidebar {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Animación de los elementos de navegación con delay escalonado */
+.nav-item {
+  opacity: 0;
+  transform: translateX(-30px);
+  animation: slideInNavItem 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.nav-item:nth-child(1) { animation-delay: 0.1s; }
+.nav-item:nth-child(2) { animation-delay: 0.15s; }
+.nav-item:nth-child(3) { animation-delay: 0.2s; }
+.nav-item:nth-child(4) { animation-delay: 0.25s; }
+.nav-item:nth-child(5) { animation-delay: 0.3s; }
+
+@keyframes slideInNavItem {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Micro-animación para el logo */
+.sidebar-logo-icon {
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.sidebar-logo-icon:hover {
+  transform: rotate(5deg) scale(1.1);
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+}
+
+/* =================================================================
+   EFECTOS HOVER REFINADOS Y PROFESIONALES
+   ================================================================= */
+
+/* Hover con efecto de elevación para nav-links */
+.nav-link {
+  position: relative;
+  background: transparent;
+  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+.nav-link::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1));
+  border-radius: 0.75rem;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.nav-link:hover::before {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.nav-link:hover {
+  transform: translateX(8px) translateY(-2px);
+  box-shadow: 
+    0 10px 25px rgba(59, 130, 246, 0.2),
+    0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Efecto de onda en click */
+.nav-link {
+  overflow: hidden;
+}
+
+.nav-link::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, transparent 70%);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.4s ease, height 0.4s ease;
+}
+
+.nav-link:active::after {
+  width: 300px;
+  height: 300px;
+}
+
+/* Hover mejorado para el avatar del usuario */
+.user-avatar {
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.user-avatar::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  background: linear-gradient(45deg, #3b82f6, #8b5cf6, #06b6d4, #3b82f6);
+  border-radius: 50%;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  animation: rotate 3s linear infinite;
+}
+
+.user-avatar:hover::before {
+  opacity: 1;
+}
+
+.user-avatar:hover {
+  transform: scale(1.1) translateY(-2px);
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+}
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* =================================================================
+   EFECTOS ESPECÍFICOS PARA BOTONES DE ACCIÓN
+   ================================================================= */
+
+/* Hover elegante para botones de acción */
+.action-button {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+.action-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transition: left 0.5s ease;
+}
+
+.action-button:hover::before {
+  left: 100%;
+}
+
+.action-button:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* Efecto especial para el botón de logout */
+.logout-button {
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+.logout-button:hover {
+  background: rgba(239, 68, 68, 0.25);
+  transform: translateY(-2px);
+  box-shadow: 
+    0 8px 25px rgba(239, 68, 68, 0.3),
+    0 0 20px rgba(239, 68, 68, 0.1);
+}
+
+.logout-button:hover .logout-icon {
+  animation: wiggle 0.5s ease-in-out;
+}
+
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-10deg); }
+  75% { transform: rotate(10deg); }
+}
+
+/* =================================================================
+   ANIMACIONES PARA TOOLTIPS
+   ================================================================= */
+
+.nav-tooltip {
+  transform: translateY(-50%) translateX(-10px);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.sidebar.collapsed .nav-item:hover .nav-tooltip {
+  transform: translateY(-50%) translateX(0);
+  animation: tooltipBounce 0.5s ease-out;
+}
+
+@keyframes tooltipBounce {
+  0% { transform: translateY(-50%) translateX(-10px) scale(0.8); }
+  50% { transform: translateY(-50%) translateX(5px) scale(1.05); }
+  100% { transform: translateY(-50%) translateX(0) scale(1); }
+}
+
+/* =================================================================
+   MICRO-ANIMACIONES PARA ICONOS
+   ================================================================= */
+
+/* Iconos con hover animado */
+.nav-icon {
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.nav-link:hover .nav-icon {
+  transform: scale(1.2) rotate(5deg);
+  filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.5));
+}
+
+/* Animación específica para diferentes iconos */
+.nav-link:hover .nav-icon.dashboard {
+  animation: pulse-dashboard 0.6s ease-in-out;
+}
+
+.nav-link:hover .nav-icon.credit-card {
+  animation: slide-card 0.6s ease-in-out;
+}
+
+.nav-link:hover .nav-icon.dollar {
+  animation: bounce-dollar 0.6s ease-in-out;
+}
+
+@keyframes pulse-dashboard {
+  0%, 100% { transform: scale(1.2); }
+  50% { transform: scale(1.4); }
+}
+
+@keyframes slide-card {
+  0%, 100% { transform: scale(1.2) translateX(0); }
+  50% { transform: scale(1.2) translateX(3px); }
+}
+
+@keyframes bounce-dollar {
+  0%, 100% { transform: scale(1.2) translateY(0); }
+  50% { transform: scale(1.2) translateY(-3px); }
+}
+
+/* =================================================================
+   ESTADOS DE LOADING Y FEEDBACK VISUAL
+   ================================================================= */
+
+/* Estado de carga para el sidebar */
+.sidebar.loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.sidebar.loading::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Feedback visual para clics */
+.nav-link:active,
+.action-button:active,
+.sidebar-toggle:active {
+  transform: scale(0.95);
+  transition: transform 0.1s ease;
+}
+
+/* =================================================================
+   MEJORAS DE ACCESIBILIDAD CON ANIMACIONES
+   ================================================================= */
+
+/* Reducir animaciones para usuarios que prefieren menos movimiento */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  .nav-link:hover {
+    transform: none;
+  }
+  
+  .user-avatar:hover {
+    transform: scale(1.05);
+  }
+}
+
+/* =================================================================
+   OPTIMIZACIONES FINALES
+   ================================================================= */
+
+/* Usar hardware acceleration para animaciones suaves */
+.nav-link,
+.action-button,
+.user-avatar,
+.sidebar-toggle,
+.nav-icon {
+  will-change: transform;
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Prevenir layout shift durante animaciones */
+.sidebar * {
+  box-sizing: border-box;
 }
