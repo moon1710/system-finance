@@ -271,7 +271,7 @@ export default function CuentasDashboard() {
                 --data-table-library_grid-template-columns: 60px 300px 1fr 120px 120px 150px;
                 font-size: 14px;
                 border-radius: 12px;
-                overflow: hidden;
+                overflow: auto;
                 box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
             `,
             Header: `

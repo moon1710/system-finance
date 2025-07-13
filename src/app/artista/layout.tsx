@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Sidebar from './components/Sidebar'
 
+
 interface User {
     nombreCompleto: string
     email?: string
@@ -18,8 +19,8 @@ export default function ArtistaLayout({
     const [user, setUser] = useState<User | null>(null)
     const [isLoading, setIsLoading] = useState(true)
     const router = useRouter()
-    
 
+    // ... tu lógica de useEffect y handleLogout no cambia ...
     useEffect(() => {
         const loadUser = async () => {
             try {
@@ -74,27 +75,21 @@ export default function ArtistaLayout({
         return null // Redirigiendo...
     }
 
+    // REEMPLAZA TU RETURN CON ESTO
     return (
-        <div className="flex h-screen bg-gray-50 overflow-hidden">
-            {/* Sidebar */}
+        <div className="flex min-h-screen bg-[#f7f7f7]">
+            {/* 1. Sidebar con 'sticky' */}
             <Sidebar user={user} onLogout={handleLogout} />
 
-            {/* Main Content Area */}
-            <main className="flex-1 flex flex-col min-w-0 relative">
-                <div className="flex-1 flex flex-col md:pl-3 lg:pl-3 transition-all duration-300">
-                    <div className="md:hidden bg-white border-b border-gray-200 p-4 shadow-sm">
-                        <h1 className="text-lg font-semibold text-gray-900">Panel Artista</h1>
-                    </div>
-                    <div className="flex-1 overflow-y-auto">
-                        <div className="p-4 md:p-6 lg:p-8">
-                            {children}
-                        </div>
-                    </div>
-                    <footer className="bg-white border-t border-gray-200 p-4 text-center text-sm text-gray-500">
-                        © 2025 Sistema de Gestión Financiera
-                    </footer>
+            {/* 2. Main simplificado para permitir scroll global */}
+            <main className="flex-1 flex flex-col w-full">
+                <div className="flex-1 p-4 md:p-6 lg:p-8">
+                    {children}
                 </div>
-                <div className="md:hidden absolute inset-0 bg-black/20 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300" />
+
+                <footer className="w-full bg-white border-t border-gray-200 p-4 text-center text-sm text-gray-500">
+                    © 2025 Sistema de Gestión Financiera
+                </footer>
             </main>
         </div>
     )
