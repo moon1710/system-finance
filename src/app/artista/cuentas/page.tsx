@@ -5,22 +5,18 @@ import { useRouter } from 'next/navigation'
 import { CompactTable } from '@table-library/react-table-library/compact'
 import { useTheme } from '@table-library/react-table-library/theme'
 import { getTheme } from '@table-library/react-table-library/baseline'
+import { motion } from 'framer-motion'
 import {
     CreditCard,
     Globe,
     MapPin,
     Plus,
-    TrendingUp,
-    Users,
     DollarSign,
-    Building,
     Edit,
     Trash2,
     Star,
     StarOff,
     Search,
-    Filter,
-    Download,
     RefreshCw,
     X
 } from 'lucide-react'
@@ -30,7 +26,6 @@ interface CuentaBancaria {
     tipoCuenta: 'nacional' | 'internacional' | 'paypal'
     nombreBanco?: string
     clabe?: string
-    numeroRuta?: string
     numeroCuenta?: string
     swift?: string
     emailPaypal?: string
@@ -39,7 +34,7 @@ interface CuentaBancaria {
     createdAt: string
 }
 
-export default function CuentasDashboard() {
+export default function CuentasDashboardCompact() {
     const [cuentas, setCuentas] = useState<CuentaBancaria[]>([])
     const [loading, setLoading] = useState(true)
     const [showModal, setShowModal] = useState(false)
@@ -50,7 +45,6 @@ export default function CuentasDashboard() {
         tipoCuenta: 'nacional' as 'nacional' | 'internacional' | 'paypal',
         nombreBanco: '',
         clabe: '',
-        numeroRuta: '',
         numeroCuenta: '',
         swift: '',
         emailPaypal: '',
@@ -59,11 +53,7 @@ export default function CuentasDashboard() {
     })
     const router = useRouter()
 
-    // Cargar cuentas (tu función original)
-    useEffect(() => {
-        fetchCuentas()
-    }, [])
-
+    useEffect(() => { fetchCuentas() }, [])
     const fetchCuentas = async () => {
         try {
             const res = await fetch('/api/cuentas')
@@ -73,658 +63,175 @@ export default function CuentasDashboard() {
             }
             const data = await res.json()
             setCuentas(data.cuentas || [])
-        } catch (error) {
-            console.error('Error:', error)
+        } catch (err) {
+            console.error(err)
         } finally {
             setLoading(false)
         }
     }
 
-    // Métricas calculadas
     const metrics = [
-        {
-            title: "Total Cuentas",
-            value: cuentas.length.toString(),
-            icon: CreditCard,
-            bgColor: "bg-blue-50",
-            iconColor: "text-blue-600",
-            borderColor: "border-blue-200"
-        },
-        {
-            title: "Cuentas Nacionales",
-            value: cuentas.filter(c => c.tipoCuenta === 'nacional').length.toString(),
-            icon: MapPin,
-            bgColor: "bg-green-50",
-            iconColor: "text-green-600",
-            borderColor: "border-green-200"
-        },
-        {
-            title: "Internacionales",
-            value: cuentas.filter(c => c.tipoCuenta === 'internacional').length.toString(),
-            icon: Globe,
-            bgColor: "bg-purple-50",
-            iconColor: "text-purple-600",
-            borderColor: "border-purple-200"
-        },
-        {
-            title: "PayPal",
-            value: cuentas.filter(c => c.tipoCuenta === 'paypal').length.toString(),
-            icon: DollarSign,
-            bgColor: "bg-orange-50",
-            iconColor: "text-orange-600",
-            borderColor: "border-orange-200"
-        }
+        { title: 'Total', value: cuentas.length.toString(), icon: CreditCard },
+        { title: 'Nacionales', value: cuentas.filter(c => c.tipoCuenta === 'nacional').length.toString(), icon: MapPin },
+        { title: 'Internacionales', value: cuentas.filter(c => c.tipoCuenta === 'internacional').length.toString(), icon: Globe },
+        { title: 'PayPal', value: cuentas.filter(c => c.tipoCuenta === 'paypal').length.toString(), icon: DollarSign }
     ]
 
-    // Tus funciones originales (sin cambios)
     const resetForm = () => {
-        setFormData({
-            tipoCuenta: 'nacional',
-            nombreBanco: '',
-            clabe: '',
-            numeroRuta: '',
-            numeroCuenta: '',
-            swift: '',
-            emailPaypal: '',
-            nombreTitular: '',
-            esPredeterminada: false
-        })
+        setFormData({ tipoCuenta: 'nacional', nombreBanco: '', clabe: '', numeroCuenta: '', swift: '', emailPaypal: '', nombreTitular: '', esPredeterminada: false })
         setEditingCuenta(null)
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        try {
-            let cleanData: any = {
-                tipoCuenta: formData.tipoCuenta,
-                nombreTitular: formData.nombreTitular,
-                esPredeterminada: formData.esPredeterminada
-            }
-
-            switch (formData.tipoCuenta) {
-                case 'nacional':
-                    cleanData.nombreBanco = formData.nombreBanco
-                    cleanData.clabe = formData.clabe
-                    break
-                case 'internacional':
-                    cleanData.nombreBanco = formData.nombreBanco
-                    cleanData.swift = formData.swift
-                    cleanData.numeroCuenta = formData.numeroCuenta
-                    if (formData.clabe?.trim()) {
-                        cleanData.clabe = formData.clabe
-                    }
-                    break
-                case 'paypal':
-                    cleanData.emailPaypal = formData.emailPaypal
-                    break
-            }
-
-            const url = editingCuenta ? `/api/cuentas/${editingCuenta.id}` : '/api/cuentas'
-            const method = editingCuenta ? 'PUT' : 'POST'
-
-            const res = await fetch(url, {
-                method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(cleanData)
-            })
-
-            const data = await res.json()
-
-            if (res.ok) {
-                alert(data.mensaje || `Cuenta ${editingCuenta ? 'actualizada' : 'creada'} exitosamente`)
-                setShowModal(false)
-                resetForm()
-                fetchCuentas()
-            } else {
-                alert(data.error || `Error al ${editingCuenta ? 'actualizar' : 'crear'} cuenta`)
-            }
-        } catch (error) {
-            alert(`Error al ${editingCuenta ? 'actualizar' : 'crear'} cuenta`)
-        }
+        let clean: any = { tipoCuenta: formData.tipoCuenta, nombreTitular: formData.nombreTitular, esPredeterminada: formData.esPredeterminada }
+        if (formData.tipoCuenta === 'nacional') { clean.nombreBanco = formData.nombreBanco; clean.clabe = formData.clabe }
+        if (formData.tipoCuenta === 'internacional') { clean.nombreBanco = formData.nombreBanco; clean.numeroCuenta = formData.numeroCuenta; clean.swift = formData.swift }
+        if (formData.tipoCuenta === 'paypal') { clean.emailPaypal = formData.emailPaypal }
+        const url = editingCuenta ? `/api/cuentas/${editingCuenta.id}` : '/api/cuentas'
+        const method = editingCuenta ? 'PUT' : 'POST'
+        const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(clean) })
+        const data = await res.json()
+        if (res.ok) { setShowModal(false); resetForm(); fetchCuentas() }
+        else alert(data.error)
     }
 
-    const handleEdit = (cuenta: CuentaBancaria) => {
-        setEditingCuenta(cuenta)
-        setFormData({
-            tipoCuenta: cuenta.tipoCuenta,
-            nombreBanco: cuenta.nombreBanco || '',
-            clabe: cuenta.clabe || '',
-            numeroRuta: cuenta.numeroRuta || '',
-            numeroCuenta: cuenta.numeroCuenta || '',
-            swift: cuenta.swift || '',
-            emailPaypal: cuenta.emailPaypal || '',
-            nombreTitular: cuenta.nombreTitular,
-            esPredeterminada: cuenta.esPredeterminada
-        })
-        setShowModal(true)
-    }
+    const handleEdit = (c: CuentaBancaria) => { setEditingCuenta(c); setFormData({ ...c, tipoCuenta: c.tipoCuenta, nombreTitular: c.nombreTitular, esPredeterminada: c.esPredeterminada }); setShowModal(true) }
+    const handleDelete = async (id: string) => { if (!confirm('¿Eliminar?')) return; await fetch(`/api/cuentas/${id}`, { method: 'DELETE' }); fetchCuentas() }
+    const handleSetDefault = async (id: string) => { await fetch(`/api/cuentas/${id}/predeterminada`, { method: 'PUT' }); fetchCuentas() }
+    const formatInfo = (c: CuentaBancaria) => c.tipoCuenta === 'paypal' ? `PayPal - ${c.emailPaypal}` : `${c.nombreBanco} ****${(c.clabe || c.numeroCuenta)?.slice(-4)}`
 
-    const handleDelete = async (cuentaId: string) => {
-        if (!confirm('¿Estás seguro de eliminar esta cuenta?')) return
-
-        try {
-            const res = await fetch(`/api/cuentas/${cuentaId}`, {
-                method: 'DELETE'
-            })
-
-            const data = await res.json()
-
-            if (res.ok) {
-                alert('Cuenta eliminada exitosamente')
-                fetchCuentas()
-            } else {
-                alert(data.error || 'Error al eliminar cuenta')
-            }
-        } catch (error) {
-            alert('Error al eliminar cuenta')
-        }
-    }
-
-    const handleSetDefault = async (cuentaId: string) => {
-        try {
-            const res = await fetch(`/api/cuentas/${cuentaId}/predeterminada`, {
-                method: 'PUT'
-            })
-
-            const data = await res.json()
-
-            if (res.ok) {
-                alert('Cuenta establecida como predeterminada')
-                fetchCuentas()
-            } else {
-                alert(data.error || 'Error al establecer cuenta predeterminada')
-            }
-        } catch (error) {
-            alert('Error al establecer cuenta predeterminada')
-        }
-    }
-
-    const formatCuentaInfo = (cuenta: CuentaBancaria) => {
-        switch (cuenta.tipoCuenta) {
-            case 'nacional':
-                return `${cuenta.nombreBanco} - ****${cuenta.clabe?.slice(-4)}`
-            case 'internacional':
-                return `${cuenta.nombreBanco} - ****${cuenta.numeroCuenta?.slice(-4)} (${cuenta.swift})`
-            case 'paypal':
-                return `PayPal - ${cuenta.emailPaypal}`
-            default:
-                return 'Información no disponible'
-        }
-    }
-
-    // Filtrar cuentas
-    const cuentasFiltradas = cuentas.filter(cuenta => {
-        const matchesSearch = cuenta.nombreTitular.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            cuenta.nombreBanco?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            cuenta.emailPaypal?.toLowerCase().includes(searchTerm.toLowerCase())
-        const matchesFilter = filterType === 'all' || cuenta.tipoCuenta === filterType
-        return matchesSearch && matchesFilter
+    const cuentasFiltradas = cuentas.filter(c => {
+        const s = searchTerm.toLowerCase()
+        return (c.nombreTitular.toLowerCase().includes(s) || c.nombreBanco?.toLowerCase().includes(s) || c.emailPaypal?.toLowerCase().includes(s))
+            && (filterType === 'all' || c.tipoCuenta === filterType)
     })
-
     const data = { nodes: cuentasFiltradas }
 
-    // Configuración React Table Library
     const theme = useTheme([
         getTheme(),
         {
             Table: `
-                --data-table-library_grid-template-columns: 60px 300px 1fr 120px 120px 150px;
-                font-size: 14px;
-                border-radius: 12px;
-                overflow: auto;
-                box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-            `,
+        --data-table-library_grid-template-columns: 40px 250px 1fr 100px 100px 120px;
+        font-size: 13px;
+        border-radius: 8px;
+        overflow-x: auto;
+      `,
             Header: `
-                background: linear-gradient(90deg, #f8fafc 0%, #f1f5f9 100%);
-                color: #475569;
-                font-weight: 600;
-                text-transform: uppercase;
-                font-size: 11px;
-                letter-spacing: 0.05em;
-                border-bottom: 2px solid #e2e8f0;
-            `,
-            Body: `
-                background-color: #ffffff;
-            `,
-            BaseRow: `
-                border-bottom: 1px solid #f1f5f9;
-                transition: all 0.3s ease;
-                &:hover {
-                    background: linear-gradient(90deg, #f8fafc 0%, #ffffff 100%);
-                    transform: translateX(4px);
-                    box-shadow: 0 2px 4px -1px rgb(0 0 0 / 0.1);
-                }
-                &:last-child {
-                    border-bottom: none;
-                }
-            `,
-            BaseCell: `
-                padding: 16px;
-                vertical-align: middle;
-            `,
-        },
+        position: sticky;
+        top: 0;
+        background-color: #2b333c;
+        color: #f7f7f7;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        z-index: 10;
+      `,
+            BaseRow: `&:hover { transform: translateX(2px); box-shadow: 0 2px 6px rgba(0,0,0,0.1); }`,
+            BaseCell: `padding: 12px; vertical-align: middle;`,
+            Body: `background-color: #f0f0f0;`
+        }
     ])
 
     const COLUMNS = [
-        {
-            label: '',
-            renderCell: (item: CuentaBancaria) => (
-                <div className="flex justify-center">
-                    {item.esPredeterminada && (
-                        <Star className="w-5 h-5 text-yellow-500 fill-current" />
-                    )}
-                </div>
-            )
-        },
-        {
-            label: 'Información de Cuenta',
-            renderCell: (item: CuentaBancaria) => (
-                <div className="flex items-center space-x-3">
-                    <div className={`p-2 rounded-lg ${item.tipoCuenta === 'nacional' ? 'bg-green-100' :
-                            item.tipoCuenta === 'internacional' ? 'bg-purple-100' : 'bg-orange-100'
-                        }`}>
-                        {item.tipoCuenta === 'nacional' ? <MapPin className="w-5 h-5 text-green-600" /> :
-                            item.tipoCuenta === 'internacional' ? <Globe className="w-5 h-5 text-purple-600" /> :
-                                <DollarSign className="w-5 h-5 text-orange-600" />}
-                    </div>
-                    <div>
-                        <div className="font-medium text-gray-900">{formatCuentaInfo(item)}</div>
-                        <div className="text-sm text-gray-500 capitalize">{item.tipoCuenta}</div>
-                    </div>
-                </div>
-            )
-        },
-        {
-            label: 'Titular',
-            renderCell: (item: CuentaBancaria) => (
-                <div>
-                    <div className="font-medium text-gray-900">{item.nombreTitular}</div>
-                    <div className="text-sm text-gray-500">
-                        {new Date(item.createdAt).toLocaleDateString('es-MX')}
-                    </div>
-                </div>
-            )
-        },
-        {
-            label: 'Tipo',
-            renderCell: (item: CuentaBancaria) => (
-                <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${item.tipoCuenta === 'nacional' ? 'bg-green-100 text-green-800' :
-                        item.tipoCuenta === 'internacional' ? 'bg-purple-100 text-purple-800' :
-                            'bg-orange-100 text-orange-800'
-                    }`}>
-                    {item.tipoCuenta === 'nacional' ? 'Nacional' :
-                        item.tipoCuenta === 'internacional' ? 'Internacional' : 'PayPal'}
-                </span>
-            )
-        },
-        {
-            label: 'Estado',
-            renderCell: (item: CuentaBancaria) => (
-                <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${item.esPredeterminada ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'
-                    }`}>
-                    {item.esPredeterminada ? 'Predeterminada' : 'Secundaria'}
-                </span>
-            )
-        },
-        {
-            label: 'Acciones',
-            renderCell: (item: CuentaBancaria) => (
-                <div className="flex items-center space-x-2">
-                    <button
-                        onClick={() => handleEdit(item)}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        title="Editar"
-                    >
-                        <Edit className="w-4 h-4" />
-                    </button>
-                    {!item.esPredeterminada && (
-                        <button
-                            onClick={() => handleSetDefault(item.id)}
-                            className="p-2 text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors"
-                            title="Establecer como predeterminada"
-                        >
-                            <StarOff className="w-4 h-4" />
-                        </button>
-                    )}
-                    <button
-                        onClick={() => handleDelete(item.id)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Eliminar"
-                    >
-                        <Trash2 className="w-4 h-4" />
-                    </button>
-                </div>
-            )
-        }
+        { label: '', renderCell: (i: CuentaBancaria) => i.esPredeterminada ? <Star className="w-4 h-4 text-[#10cfbd]" /> : null },
+        { label: 'Cuenta', renderCell: (i: CuentaBancaria) => <div className="flex items-center space-x-2"><div className="p-1 rounded bg-[#527ceb] text-[#f7f7f7]">{i.tipoCuenta === 'nacional' ? <MapPin className="w-4 h-4" /> : i.tipoCuenta === 'internacional' ? <Globe className="w-4 h-4" /> : <DollarSign className="w-4 h-4" />}</div><div><div className="font-medium text-[#21252d] text-sm">{formatInfo(i)}</div><div className="text-xs text-[#7c777a] capitalize">{i.tipoCuenta}</div></div></div> },
+        { label: 'Titular', renderCell: (i: CuentaBancaria) => <div><div className="font-medium text-[#21252d] text-sm">{i.nombreTitular}</div><div className="text-xs text-[#7c777a]">{new Date(i.createdAt).toLocaleDateString('es-MX')}</div></div> },
+        { label: 'Tipo', renderCell: (i: CuentaBancaria) => <span className="px-2 py-0.5 text-xs rounded-full bg-[#f7f7f7] text-[#21252d]">{i.tipoCuenta}</span> },
+        { label: 'Estado', renderCell: (i: CuentaBancaria) => <span className="px-2 py-0.5 text-xs rounded-full bg-[#f7f7f7] text-[#21252d]">{i.esPredeterminada ? 'Predeterminada' : 'Secundaria'}</span> },
+        { label: 'Acciones', renderCell: (i: CuentaBancaria) => <div className="flex space-x-1"><motion.button whileHover={{ scale: 1.1 }} onClick={() => handleEdit(i)}><Edit className="w-4 h-4 text-[#6762b3] hover:text-[#48b0f7]" /></motion.button>{!i.esPredeterminada && <motion.button whileHover={{ scale: 1.1 }} onClick={() => handleSetDefault(i.id)}><Star className="w-4 h-4 text-[#019fd2] hover:text-[#10cfbd]" /></motion.button>}<motion.button whileHover={{ scale: 1.1 }} onClick={() => handleDelete(i.id)}><Trash2 className="w-4 h-4 text-[#d64545] hover:text-[#ff6b6b]" /></motion.button></div> }
     ]
 
-    const renderFormFields = () => {
-        switch (formData.tipoCuenta) {
-            case 'nacional':
-                return (
-                    <>
-                        <div className="mb-4">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Banco *
-                            </label>
-                            <input
-                                type="text"
-                                required
-                                value={formData.nombreBanco}
-                                onChange={(e) => setFormData({ ...formData, nombreBanco: e.target.value })}
-                                className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                placeholder="Ej: BBVA México, Banorte, Santander"
-                            />
-                        </div>
-                        <div className="mb-4">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                CLABE (18 dígitos) *
-                            </label>
-                            <input
-                                type="text"
-                                required
-                                maxLength={18}
-                                value={formData.clabe}
-                                onChange={(e) => setFormData({ ...formData, clabe: e.target.value })}
-                                className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                placeholder="123456789012345678"
-                            />
-                        </div>
-                    </>
-                )
-
-            case 'internacional':
-                return (
-                    <>
-                        <div className="mb-4">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                País *
-                            </label>
-                            <select className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                                <option value="USA">Estados Unidos</option>
-                                <option value="other">Otro país</option>
-                            </select>
-                        </div>
-                        <div className="mb-4">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Código SWIFT *
-                            </label>
-                            <input
-                                type="text"
-                                required
-                                value={formData.swift}
-                                onChange={(e) => setFormData({ ...formData, swift: e.target.value.toUpperCase() })}
-                                className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                placeholder="BCMRMXMM"
-                            />
-                        </div>
-                        <div className="mb-4">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Número de Cuenta *
-                            </label>
-                            <input
-                                type="text"
-                                required
-                                value={formData.numeroCuenta}
-                                onChange={(e) => setFormData({ ...formData, numeroCuenta: e.target.value })}
-                                className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                placeholder="123456789012345678"
-                            />
-                        </div>
-                        <div className="mb-4">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                CLABE (solo México, 18 dígitos)
-                            </label>
-                            <input
-                                type="text"
-                                maxLength={18}
-                                value={formData.clabe}
-                                onChange={(e) => setFormData({ ...formData, clabe: e.target.value })}
-                                className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                placeholder="123456789012345678"
-                            />
-                        </div>
-                    </>
-                )
-            case 'paypal':
-                return (
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Email de PayPal *
-                        </label>
-                        <input
-                            type="email"
-                            required
-                            value={formData.emailPaypal}
-                            onChange={(e) => setFormData({ ...formData, emailPaypal: e.target.value })}
-                            className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                            placeholder="tu@email.com"
-                        />
-                    </div>
-                )
-        }
-    }
-
-    if (loading) {
-        return (
-            <div className="p-8">
-                <div className="animate-pulse">
-                    <div className="h-8 bg-gray-200 rounded w-64 mb-6"></div>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                        {[...Array(4)].map((_, i) => (
-                            <div key={i} className="h-32 bg-gray-200 rounded-lg"></div>
-                        ))}
-                    </div>
-                    <div className="h-96 bg-gray-200 rounded-lg"></div>
-                </div>
-            </div>
-        )
-    }
+    if (loading) return <div className="p-6 animate-pulse"><div className="h-6 bg-[#f0f0f0] rounded w-48 mb-4"></div><div className="h-64 bg-[#f0f0f0] rounded"></div></div>
 
     return (
-        <div className="p-8 space-y-8 animate-fadeIn">
+        <div className="p-6 space-y-6 max-w-full">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Gestión de Cuentas Bancarias</h1>
-                    <p className="text-gray-600 mt-1">Administra las cuentas de destino para retiros</p>
+                    <h1 className="text-2xl font-semibold text-[#21252d]">Gestión de Cuentas</h1>
+                    <p className="text-sm text-[#7c777a]">Administra las cuentas de destino</p>
                 </div>
-                <div className="flex items-center space-x-3">
-                    <button
-                        onClick={fetchCuentas}
-                        className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-                    >
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                        Actualizar
-                    </button>
-                    <button
-                        onClick={() => {
-                            resetForm()
-                            setShowModal(true)
-                        }}
-                        className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl"
-                    >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Agregar Cuenta
-                    </button>
+                <div className="flex items-center space-x-2">
+                    <motion.button whileHover={{ scale: 1.05 }} onClick={fetchCuentas} className="flex items-center px-3 py-1 border border-[#21252d] rounded text-sm text-[#21252d] hover:bg-[#f0f0f0] transition"><RefreshCw className="w-4 h-4 mr-1" />Actualizar</motion.button>
+                    <motion.button whileHover={{ scale: 1.05 }} onClick={() => { resetForm(); setShowModal(true) }} className="flex items-center px-3 py-1 bg-[#527ceb] text-[#f7f7f7] rounded text-sm hover:bg-[#48b0f7] transition"><Plus className="w-4 h-4 mr-1" />Agregar</motion.button>
                 </div>
             </div>
 
             {/* Métricas */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {metrics.map((metric, index) => (
-                    <div key={index} className={`bg-white rounded-xl p-6 shadow-sm border-2 ${metric.borderColor} hover:shadow-md transition-all duration-300`}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {metrics.map((m, index) => (
+                    <motion.div key={index} whileHover={{ scale: 1.02 }} className="bg-[#f7f7f7] p-4 rounded-lg shadow border border-[#e0e0e0] transition">
                         <div className="flex items-center justify-between">
-                            <div className={`p-3 rounded-lg ${metric.bgColor}`}>
-                                <metric.icon className={`w-6 h-6 ${metric.iconColor}`} />
-                            </div>
-                            <div className="text-right">
-                                <h3 className="text-2xl font-bold text-gray-900">{metric.value}</h3>
-                            </div>
+                            <div className="p-2 rounded" style={{ backgroundColor: '#dfe1e5' }}><m.icon className="w-5 h-5 text-[#6762b3]" /></div>
+                            <div><h3 className="text-xl font-bold text-[#21252d]">{m.value}</h3></div>
                         </div>
-                        <div className="mt-4">
-                            <p className="text-gray-600 text-sm">{metric.title}</p>
-                        </div>
-                    </div>
+                        <p className="text-xs text-[#7c777a] mt-2">{m.title}</p>
+                    </motion.div>
                 ))}
             </div>
 
             {/* Filtros */}
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                <div className="flex flex-col sm:flex-row gap-4">
-                    <div className="flex-1">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                            <input
-                                type="text"
-                                placeholder="Buscar por titular, banco o email..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            />
-                        </div>
+            <div className="bg-[#f7f7f7] p-4 rounded-lg shadow border border-[#e0e0e0]">
+                <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#7c777a] w-4 h-4" />
+                        <input type="text" placeholder="Buscar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-10 pr-2 py-2 text-sm border border-[#d0d0d0] rounded focus:ring-1 focus:ring-[#019fd2] focus:border-transparent" />
                     </div>
-                    <div className="flex gap-3">
-                        <select
-                            value={filterType}
-                            onChange={(e) => setFilterType(e.target.value)}
-                            className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                            <option value="all">Todos los tipos</option>
-                            <option value="nacional">Nacional</option>
-                            <option value="internacional">Internacional</option>
-                            <option value="paypal">PayPal</option>
-                        </select>
-                    </div>
+                    <select value={filterType} onChange={e => setFilterType(e.target.value)} className="px-3 py-2 text-sm border border-[#d0d0d0] rounded focus:ring-1 focus:ring-[#019fd2] focus:border-transparent">
+                        <option value="all">Todos</option>
+                        <option value="nacional">Nacional</option>
+                        <option value="internacional">Internacional</option>
+                        <option value="paypal">PayPal</option>
+                    </select>
                 </div>
             </div>
 
-            {/* Tabla de Cuentas */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                {cuentasFiltradas.length === 0 ? (
-                    <div className="p-12 text-center">
-                        <CreditCard className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">No hay cuentas registradas</h3>
-                        <p className="text-gray-600 mb-4">
-                            {searchTerm || filterType !== 'all'
-                                ? 'No se encontraron cuentas con los filtros aplicados.'
-                                : 'Agrega una cuenta bancaria para poder solicitar retiros.'}
-                        </p>
-                        {(!searchTerm && filterType === 'all') && (
-                            <button
-                                onClick={() => {
-                                    resetForm()
-                                    setShowModal(true)
-                                }}
-                                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-                            >
-                                <Plus className="w-4 h-4 mr-2" />
-                                Agregar Primera Cuenta
-                            </button>
-                        )}
-                    </div>
-                ) : (
-                    <CompactTable columns={COLUMNS} data={data} theme={theme} />
-                )}
+            {/* Tabla */}
+            <div className="bg-[#gallery] rounded-lg shadow border border-[#e0e0e0] overflow-x-auto">
+                <CompactTable columns={COLUMNS} data={data} theme={theme} />
             </div>
 
-            {/* Modal para crear/editar cuenta */}
+            {/* Modal */}
             {showModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
-                        <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-xl font-bold text-gray-900">
-                                {editingCuenta ? 'Editar Cuenta' : 'Agregar Nueva Cuenta'}
-                            </h2>
-                            <button
-                                onClick={() => {
-                                    setShowModal(false)
-                                    resetForm()
-                                }}
-                                className="text-gray-400 hover:text-gray-600 transition-colors"
-                            >
-                                <X className="w-6 h-6" />
-                            </button>
+                <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center p-4">
+                    <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.2 }} className="bg-[#wild-sand] p-4 rounded-lg w-full max-w-md max-h-[85vh] overflow-auto shadow-lg">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-lg font-semibold text-[#21252d]">{editingCuenta ? 'Editar' : 'Agregar'} Cuenta</h2>
+                            <button onClick={() => { setShowModal(false); resetForm() }}><X className="w-5 h-5 text-[#7c777a]" /></button>
                         </div>
-
-                        <form onSubmit={handleSubmit} className="space-y-4">
+                        <form onSubmit={handleSubmit} className="space-y-3 text-sm">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Tipo de Cuenta *
-                                </label>
-                                <select
-                                    value={formData.tipoCuenta}
-                                    onChange={(e) => {
-                                        const nuevoTipo = e.target.value as 'nacional' | 'internacional' | 'paypal'
-                                        setFormData({
-                                            tipoCuenta: nuevoTipo,
-                                            nombreBanco: '',
-                                            clabe: '',
-                                            numeroRuta: '',
-                                            numeroCuenta: '',
-                                            swift: '',
-                                            emailPaypal: '',
-                                            nombreTitular: formData.nombreTitular,
-                                            esPredeterminada: formData.esPredeterminada
-                                        })
-                                    }}
-                                    className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                >
-                                    <option value="nacional">Nacional (México)</option>
-                                    <option value="internacional">Internacional (USA y otros)</option>
+                                <label className="block mb-1 text-[#21252d]">Tipo *</label>
+                                <select value={formData.tipoCuenta} onChange={e => { const t = e.target.value as any; setFormData({ ...formData, tipoCuenta: t }) }} className="w-full py-1 px-2 border border-[#d0d0d0] rounded focus:ring-1 focus:ring-[#019fd2]">
+                                    <option value="nacional">Nacional</option>
+                                    <option value="internacional">Internacional</option>
                                     <option value="paypal">PayPal</option>
                                 </select>
                             </div>
-
-                            {renderFormFields()}
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Nombre del Titular *
-                                </label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={formData.nombreTitular}
-                                    onChange={(e) => setFormData({ ...formData, nombreTitular: e.target.value })}
-                                    className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                    placeholder="Nombre completo del titular"
-                                />
-                            </div>
-
-                            <div className="flex items-center">
-                                <input
-                                    type="checkbox"
-                                    id="predeterminada"
-                                    checked={formData.esPredeterminada}
-                                    onChange={(e) => setFormData({ ...formData, esPredeterminada: e.target.checked })}
-                                    className="mr-3 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                />
-                                <label htmlFor="predeterminada" className="text-sm text-gray-700">
-                                    Establecer como cuenta predeterminada
-                                </label>
-                            </div>
-
-                            <div className="flex justify-end space-x-3 pt-4">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setShowModal(false)
-                                        resetForm()
-                                    }}
-                                    className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                                >
-                                    Cancelar
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-lg"
-                                >
-                                    {editingCuenta ? 'Actualizar' : 'Crear'}
-                                </button>
+                            {formData.tipoCuenta === 'nacional' && (
+                                <>
+                                    <div><label className="block mb-1 text-[#21252d]">Banco *</label><input required value={formData.nombreBanco} onChange={e => setFormData({ ...formData, nombreBanco: e.target.value })} className="w-full py-1 px-2 border border-[#d0d0d0] rounded focus:ring-1 focus:ring-[#019fd2]" /></div>
+                                    <div><label className="block mb-1 text-[#21252d]">CLABE *</label><input required maxLength={18} value={formData.clabe} onChange={e => setFormData({ ...formData, clabe: e.target.value })} className="w-full py-1 px-2 border border-[#d0d0d0] rounded focus:ring-1 focus:ring-[#019fd2]" /></div>
+                                </>
+                            )}
+                            {formData.tipoCuenta === 'internacional' && (
+                                <>
+                                    <div><label className="block mb-1 text-[#21252d]">SWIFT *</label><input required value={formData.swift} onChange={e => setFormData({ ...formData, swift: e.target.value.toUpperCase() })} className="w-full py-1 px-2 border border-[#d0d0d0] rounded focus:ring-1 focus:ring-[#019fd2]" /></div>
+                                    <div><label className="block mb-1 text-[#21252d]">Cuenta *</label><input required value={formData.numeroCuenta} onChange={e => setFormData({ ...formData, numeroCuenta: e.target.value })} className="w-full py-1 px-2 border border-[#d0d0d0] rounded focus:ring-1 focus:ring-[#019fd2]" /></div>
+                                </>
+                            )}
+                            {formData.tipoCuenta === 'paypal' && (
+                                <div><label className="block mb-1 text-[#21252d]">Email PayPal *</label><input required type="email" value={formData.emailPaypal} onChange={e => setFormData({ ...formData, emailPaypal: e.target.value })} className="w-full py-1 px-2 border border-[#d0d0d0] rounded focus:ring-1 focus:ring-[#019fd2]" /></div>
+                            )}
+                            <div><label className="block mb-1 text-[#21252d]">Titular *</label><input required value={formData.nombreTitular} onChange={e => setFormData({ ...formData, nombreTitular: e.target.value })} className="w-full py-1 px-2 border border-[#d0d0d0] rounded focus:ring-1 focus:ring-[#019fd2]" /></div>
+                            <div className="flex items-center"><input type="checkbox" checked={formData.esPredeterminada} onChange={e => setFormData({ ...formData, esPredeterminada: e.target.checked })} className="mr-2" /><label className="text-[#21252d] text-sm">Predeterminada</label></div>
+                            <div className="flex justify-end gap-2 pt-3">
+                                <button type="button" onClick={() => { setShowModal(false); resetForm() }} className="px-4 py-1 text-sm border border-[#21252d] rounded hover:bg-[#f0f0f0]">Cancelar</button>
+                                <button type="submit" className="px-4 py-1 bg-[#527ceb] text-[#f7f7f7] rounded text-sm hover:bg-[#48b0f7]">{editingCuenta ? 'Actualizar' : 'Crear'}</button>
                             </div>
                         </form>
-                    </div>
+                    </motion.div>
                 </div>
             )}
         </div>
