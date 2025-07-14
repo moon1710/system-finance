@@ -5,7 +5,7 @@ import { prisma } from '@/lib/db';
 import { getIronSession } from 'iron-session';
 import { sessionOptions, SessionData } from '@/lib/session';
 import { generateTemporaryPassword, hashPassword } from '@/lib/auth';
-import { enviarEmailBienvenida } from '@/lib/email/emailService';
+import { enviarEmailBienvenida } from '@/lib/emailService';
 
 // Esquema de validación actualizado para incluir el rol.
 const createUserSchema = z.object({
