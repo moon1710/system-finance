@@ -18,6 +18,8 @@ export interface DatosCuentaBancaria {
   emailPaypal?: string;
   nombreTitular: string;
   esPredeterminada?: boolean;
+  // --- CAMBIO CLAVE: Se incluye el campo 'pais' ---
+  pais?: string;
 }
 
 export interface ResultadoOperacion {
@@ -39,109 +41,95 @@ export async function crearCuentaBancaria(
   datos: DatosCuentaBancaria
 ): Promise<ResultadoOperacion> {
   try {
-    // Validar datos
+    // 1. Validar datos con la lógica corregida
     const validacion = validarDatosCuenta(tipoCuenta, datos);
     if (!validacion.esValido) {
-      return {
-        exito: false,
-        mensaje: 'Datos de cuenta no válidos',
-        errores: validacion.errores
-      };
+      return { exito: false, mensaje: 'Datos de cuenta no válidos', errores: validacion.errores };
     }
 
-    // Verificar que el usuario existe
-    const usuario = await prisma.usuario.findUnique({
-      where: { id: userId }
-    });
-
+    const usuario = await prisma.usuario.findUnique({ where: { id: userId } });
     if (!usuario) {
-      return {
-        exito: false,
-        mensaje: 'Usuario no encontrado'
-      };
+      return { exito: false, mensaje: 'Usuario no encontrado' };
     }
 
-    // Si es la primera cuenta o se marca como predeterminada, será la predeterminada
-    const cuentasExistentes = await prisma.cuentaBancaria.count({
-      where: { userId }
-    });
+    // --- LÓGICA MODIFICADA PARA CONSTRUIR DATOS DINÁMICAMENTE ---
 
+    // 2. Construir el objeto de datos base
+    const dataToCreate: any = {
+      userId,
+      tipoCuenta,
+      nombreTitular: datos.nombreTitular,
+    };
+
+    // 3. Añadir campos específicos según el tipo
+    switch (tipoCuenta) {
+      case 'nacional':
+        dataToCreate.nombreBanco = datos.nombreBanco;
+        dataToCreate.clabe = datos.clabe;
+        break;
+      case 'internacional':
+        dataToCreate.nombreBanco = datos.nombreBanco;
+        dataToCreate.numeroCuenta = datos.numeroCuenta;
+        dataToCreate.swift = datos.swift;
+        dataToCreate.numeroRuta = datos.numeroRuta;
+        dataToCreate.pais = datos.pais;
+        break;
+      case 'paypal':
+        dataToCreate.emailPaypal = datos.emailPaypal;
+        break;
+    }
+
+    // 4. Manejar la lógica de 'esPredeterminada'
+    const cuentasExistentes = await prisma.cuentaBancaria.count({ where: { userId } });
     const esPredeterminada = datos.esPredeterminada || cuentasExistentes === 0;
 
-    // Si se marca como predeterminada, desmarcar las demás
     if (esPredeterminada) {
       await prisma.cuentaBancaria.updateMany({
         where: { userId, esPredeterminada: true },
-        data: { esPredeterminada: false }
+        data: { esPredeterminada: false },
       });
+      dataToCreate.esPredeterminada = true;
+    } else {
+      dataToCreate.esPredeterminada = false;
     }
 
-    // Crear la cuenta
+    // 5. Crear la cuenta con los datos limpios y filtrados
     const nuevaCuenta = await prisma.cuentaBancaria.create({
-      data: {
-        userId,
-        tipoCuenta,
-        nombreBanco: datos.nombreBanco,
-        clabe: datos.clabe,
-        numeroRuta: datos.numeroRuta,
-        numeroCuenta: datos.numeroCuenta,
-        swift: datos.swift,
-        emailPaypal: datos.emailPaypal,
-        nombreTitular: datos.nombreTitular,
-        esPredeterminada
-      }
+      data: dataToCreate,
     });
 
     return {
       exito: true,
       mensaje: 'Cuenta bancaria creada exitosamente',
-      data: nuevaCuenta
+      data: nuevaCuenta,
     };
 
   } catch (error: any) {
-    // Manejar errores de unicidad
-    if (error.code === 'P2002') {
-      return {
-        exito: false,
-        mensaje: 'Ya existe una cuenta con estos datos para este usuario'
-      };
+    if (error.code === 'P2002') { // Error de restricción única de Prisma
+      const target = error.meta?.target || ['un campo'];
+      return { exito: false, mensaje: `Ya existe una cuenta con el mismo valor en: ${target.join(', ')}` };
     }
-
     console.error('Error al crear cuenta bancaria:', error);
-    return {
-      exito: false,
-      mensaje: 'Error interno del servidor'
-    };
+    return { exito: false, mensaje: 'Error interno del servidor' };
   }
 }
+
 
 /**
  * Obtener todas las cuentas de un usuario
  * @param userId - ID del usuario
  */
 export async function obtenerCuentasPorUsuario(userId: string): Promise<ResultadoOperacion> {
-  try {
-    const cuentas = await prisma.cuentaBancaria.findMany({
-      where: { userId },
-      orderBy: [
-        { esPredeterminada: 'desc' }, // Predeterminada primero
-        { createdAt: 'desc' }        // Más recientes después
-      ]
-    });
-
-    return {
-      exito: true,
-      mensaje: 'Cuentas obtenidas exitosamente',
-      data: cuentas
-    };
-
-  } catch (error) {
-    console.error('Error al obtener cuentas:', error);
-    return {
-      exito: false,
-      mensaje: 'Error al obtener las cuentas bancarias'
-    };
-  }
+    try {
+        const cuentas = await prisma.cuentaBancaria.findMany({
+            where: { userId },
+            orderBy: [{ esPredeterminada: 'desc' }, { createdAt: 'desc' }]
+        });
+        return { exito: true, mensaje: 'Cuentas obtenidas exitosamente', data: cuentas };
+    } catch (error) {
+        console.error('Error al obtener cuentas:', error);
+        return { exito: false, mensaje: 'Error al obtener las cuentas bancarias' };
+    }
 }
 
 /**
@@ -154,90 +142,63 @@ export async function actualizarCuentaBancaria(
   datos: Partial<DatosCuentaBancaria>
 ): Promise<ResultadoOperacion> {
   try {
-    // Verificar que la cuenta existe
-    const cuentaExistente = await prisma.cuentaBancaria.findUnique({
-      where: { id: cuentaId }
-    });
-
+    const cuentaExistente = await prisma.cuentaBancaria.findUnique({ where: { id: cuentaId } });
     if (!cuentaExistente) {
-      return {
-        exito: false,
-        mensaje: 'Cuenta bancaria no encontrada'
-      };
+      return { exito: false, mensaje: 'Cuenta bancaria no encontrada' };
     }
 
-    // Si se cambian datos críticos, validar
-    const datosCombinados = {
-      tipoCuenta: datos.tipoCuenta || cuentaExistente.tipoCuenta,
-      nombreBanco: datos.nombreBanco || cuentaExistente.nombreBanco,
-      clabe: datos.clabe || cuentaExistente.clabe,
-      numeroRuta: datos.numeroRuta || cuentaExistente.numeroRuta,
-      numeroCuenta: datos.numeroCuenta || cuentaExistente.numeroCuenta,
-      swift: datos.swift || cuentaExistente.swift,
-      emailPaypal: datos.emailPaypal || cuentaExistente.emailPaypal,
-      nombreTitular: datos.nombreTitular || cuentaExistente.nombreTitular,
-    };
+    // --- LÓGICA MODIFICADA PARA ACTUALIZACIÓN DINÁMICA ---
+    const dataToUpdate: any = {};
+    const tipoCuenta = cuentaExistente.tipoCuenta as 'nacional' | 'internacional' | 'paypal';
 
-    const validacion = validarDatosCuenta(
-      datosCombinados.tipoCuenta as any,
-      datosCombinados
-    );
+    // Campos que siempre se pueden actualizar
+    if (datos.nombreTitular) dataToUpdate.nombreTitular = datos.nombreTitular;
+    if (datos.esPredeterminada !== undefined) dataToUpdate.esPredeterminada = datos.esPredeterminada;
 
+    // Campos específicos del tipo de cuenta
+    switch (tipoCuenta) {
+        case 'nacional':
+            if (datos.nombreBanco) dataToUpdate.nombreBanco = datos.nombreBanco;
+            if (datos.clabe) dataToUpdate.clabe = datos.clabe;
+            break;
+        case 'internacional':
+            if (datos.nombreBanco) dataToUpdate.nombreBanco = datos.nombreBanco;
+            if (datos.numeroCuenta) dataToUpdate.numeroCuenta = datos.numeroCuenta;
+            if (datos.swift !== undefined) dataToUpdate.swift = datos.swift;
+            if (datos.numeroRuta !== undefined) dataToUpdate.numeroRuta = datos.numeroRuta;
+            if (datos.pais) dataToUpdate.pais = datos.pais;
+            break;
+        case 'paypal':
+            if (datos.emailPaypal) dataToUpdate.emailPaypal = datos.emailPaypal;
+            break;
+    }
+    
+    const validacion = validarDatosCuenta(tipoCuenta, { ...cuentaExistente, ...dataToUpdate });
     if (!validacion.esValido) {
-      return {
-        exito: false,
-        mensaje: 'Datos de cuenta no válidos',
-        errores: validacion.errores
-      };
+        return { exito: false, mensaje: 'Datos de cuenta no válidos', errores: validacion.errores };
     }
 
-    // Si se marca como predeterminada, desmarcar las demás
     if (datos.esPredeterminada) {
       await prisma.cuentaBancaria.updateMany({
-        where: { 
-          userId: cuentaExistente.userId, 
-          esPredeterminada: true,
-          id: { not: cuentaId }
-        },
-        data: { esPredeterminada: false }
+        where: { userId: cuentaExistente.userId, esPredeterminada: true, id: { not: cuentaId } },
+        data: { esPredeterminada: false },
       });
     }
 
-    // Actualizar la cuenta
     const cuentaActualizada = await prisma.cuentaBancaria.update({
       where: { id: cuentaId },
-      data: {
-        tipoCuenta: datos.tipoCuenta,
-        nombreBanco: datos.nombreBanco,
-        clabe: datos.clabe,
-        numeroRuta: datos.numeroRuta,
-        numeroCuenta: datos.numeroCuenta,
-        swift: datos.swift,
-        emailPaypal: datos.emailPaypal,
-        nombreTitular: datos.nombreTitular,
-        esPredeterminada: datos.esPredeterminada
-      }
+      data: dataToUpdate,
     });
 
-    return {
-      exito: true,
-      mensaje: 'Cuenta bancaria actualizada exitosamente',
-      data: cuentaActualizada
-    };
+    return { exito: true, mensaje: 'Cuenta bancaria actualizada exitosamente', data: cuentaActualizada };
 
   } catch (error: any) {
     if (error.code === 'P2002') {
-      return {
-        exito: false,
-        mensaje: 'Ya existe una cuenta con estos datos para este usuario'
-      };
+        const target = error.meta?.target || ['un campo'];
+        return { exito: false, mensaje: `Ya existe una cuenta con el mismo valor en: ${target.join(', ')}`};
     }
-
     console.error('Error al actualizar cuenta bancaria:', error);
-    return {
-      exito: false,
-      mensaje: 'Error interno del servidor'
-    };
+    return { exito: false, mensaje: 'Error interno del servidor' };
   }
 }
 

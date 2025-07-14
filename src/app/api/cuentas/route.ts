@@ -62,34 +62,25 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    // Obtener sesión
-    const userId = request.headers.get('x-user-id') // Temporal - cambiar por tu auth
+    const session = await getIronSession<SessionData>(request, new NextResponse(), sessionOptions)
 
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'Usuario no autenticado' },
-        { status: 401 }
-      )
+    if (!session.isLoggedIn || !session.userId) {
+      return NextResponse.json({ error: 'Usuario no autenticado' }, { status: 401 });
     }
 
-    // Obtener datos del body
-    const body = await request.json()
-    console.log('Datos recibidos:', body) // Ver qué llega
+    const userId = session.userId;
+    const body = await request.json();
 
-    // Validar campos requeridos
     if (!body.tipoCuenta || !body.nombreTitular) {
-      return NextResponse.json(
-        { error: 'Tipo de cuenta y nombre del titular son requeridos' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Tipo de cuenta y nombre del titular son requeridos' }, { status: 400 });
     }
 
-    // Validar tipo de cuenta
-    if (!['nacional', 'internacional', 'paypal'].includes(body.tipoCuenta)) {
-      return NextResponse.json(
-        { error: 'Tipo de cuenta no válido' },
-        { status: 400 }
-      )
+    // --- VALIDACIÓN ADICIONAL ---
+    if (body.tipoCuenta === 'internacional' && !body.pais) {
+        return NextResponse.json(
+            { error: 'El país es un campo requerido para cuentas internacionales' },
+            { status: 400 }
+        );
     }
 
     // Crear la cuenta
@@ -97,30 +88,27 @@ export async function POST(request: NextRequest) {
       tipoCuenta: body.tipoCuenta,
       nombreBanco: body.nombreBanco,
       clabe: body.clabe,
-      numeroRuta: body.numeroRuta,
       numeroCuenta: body.numeroCuenta,
       swift: body.swift,
       emailPaypal: body.emailPaypal,
       nombreTitular: body.nombreTitular,
-      esPredeterminada: body.esPredeterminada
-    })
+      esPredeterminada: body.esPredeterminada,
+      // --- PASAR EL NUEVO CAMPO ---
+      pais: body.pais 
+    });
 
     if (!resultado.exito) {
-      console.log('Error en creación:', resultado.mensaje, resultado.errores) // Debug
-      return NextResponse.json({ error: resultado.mensaje, errores: resultado.errores }, { status: 400 })
+      return NextResponse.json({ error: resultado.mensaje, errores: resultado.errores }, { status: 400 });
     }
 
     return NextResponse.json({
       success: true,
       mensaje: resultado.mensaje,
       cuenta: resultado.data
-    }, { status: 201 })
+    }, { status: 201 });
 
   } catch (error) {
-    console.error('Error en POST /api/cuentas:', error)
-    return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
-    )
+    console.error('Error en POST /api/cuentas:', error);
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }
