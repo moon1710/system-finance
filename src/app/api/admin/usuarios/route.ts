@@ -5,14 +5,16 @@ import { prisma } from '@/lib/db';
 import { getIronSession } from 'iron-session';
 import { sessionOptions, SessionData } from '@/lib/session';
 import { generateTemporaryPassword, hashPassword } from '@/lib/auth';
-import { enviarEmailBienvenida } from '@/lib/emailService'; // <-- Importa la función de email
+import { enviarEmailBienvenida } from '@/lib/email/emailService';
 
+// Esquema de validación actualizado para incluir el rol.
 const createUserSchema = z.object({
   nombreCompleto: z.string().min(3).max(100),
   email: z.string().email().max(255),
+  rol: z.enum(['artista', 'admin']), // Se añade la validación para el rol.
 });
 
-// GET - Listar artistas del admin
+// GET - Listar artistas del admin (Sin cambios)
 export async function GET(request: NextRequest) {
   try {
     const session = await getIronSession<SessionData>(request, NextResponse.next(), sessionOptions);
@@ -24,7 +26,6 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    // Obtener artistas asignados al admin
     const artistas = await prisma.usuario.findMany({
       where: {
         rol: 'artista',
@@ -66,9 +67,8 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Crear nuevo artista
+// POST - Crear nuevo usuario (artista o admin) - CORREGIDO
 export async function POST(request: NextRequest) {
-  // En App Router, `NextResponse.next()` se pasa como segundo argumento a `getIronSession`
   const response = new NextResponse(); 
   const session = await getIronSession<SessionData>(request, response, sessionOptions);
 
@@ -81,9 +81,9 @@ export async function POST(request: NextRequest) {
     }
     
     const body = await request.json();
-    const { nombreCompleto, email } = createUserSchema.parse(body);
+    // Se extrae el 'rol' del body validado.
+    const { nombreCompleto, email, rol } = createUserSchema.parse(body);
     
-    // Verificar si el email ya existe
     const existingUser = await prisma.usuario.findUnique({
       where: { email }
     });
@@ -95,60 +95,70 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Generar contraseña temporal
     const tempPassword = generateTemporaryPassword();
     const passwordHash = await hashPassword(tempPassword);
     
-    // Crear usuario y relación en una transacción
-    const usuario = await prisma.$transaction(async (tx) => {
-      // Crear artista
-      const newUser = await tx.usuario.create({
+    let usuario;
+
+    // Lógica condicional basada en el rol.
+    if (rol === 'artista') {
+      // Si es artista, se crea el usuario y la relación en una transacción.
+      usuario = await prisma.$transaction(async (tx) => {
+        const newUser = await tx.usuario.create({
+          data: {
+            nombreCompleto,
+            email,
+            passwordHash,
+            rol: 'artista', // Usar el rol correcto.
+            requiereCambioPassword: true,
+            estadoCuenta: 'Activa'
+          }
+        });
+        
+        await tx.adminArtistaRelacion.create({
+          data: {
+            adminId: session.userId, // El admin que crea
+            artistaId: newUser.id      // El nuevo artista
+          }
+        });
+        
+        return newUser;
+      });
+      console.log(`[AUDIT] Admin ${session.userId} creó al artista ${usuario.id}`);
+
+    } else { // Si el rol es 'admin'
+      // Si es admin, solo se crea el usuario. No se necesita transacción.
+      usuario = await prisma.usuario.create({
         data: {
           nombreCompleto,
           email,
           passwordHash,
-          rol: 'admin',
+          rol: 'admin', // Usar el rol correcto.
           requiereCambioPassword: true,
           estadoCuenta: 'Activa'
         }
       });
-      
-      // Crear relación admin-artista
-      await tx.adminArtistaRelacion.create({
-        data: {
-          adminId: session.userId,
-          artistaId: newUser.id
-        }
-      });
-      
-      return newUser;
-    });
+      console.log(`[AUDIT] Admin ${session.userId} creó al admin ${usuario.id}`);
+    }
     
-    // Log de auditoría
-    console.log(`[AUDIT] Admin ${session.userId} creó artista ${usuario.id}`);
-    
-    // TODO: Enviar email con credenciales cuando esté configurado
-    // ¡Aquí se envía el email de bienvenida!
+    // Enviar email con credenciales.
     try {
       await enviarEmailBienvenida(email, tempPassword);
       console.log(`[EMAIL] Email de bienvenida con credenciales temporales enviado a: ${email}`);
     } catch (emailError) {
       console.error(`[EMAIL ERROR] Fallo al enviar email de bienvenida a ${email}:`, emailError);
-      // Decide cómo manejar este error:
-      // 1. Podrías devolver un status 500 para indicar un fallo completo.
-      // 2. O, como está ahora, loguearlo y continuar, asumiendo que la creación del usuario es más crítica que la notificación.
-      // La implementación actual no detiene la respuesta exitosa al frontend si el email falla.
+      // La creación del usuario fue exitosa, pero el email falló.
+      // Se puede añadir un mensaje específico para esto si se desea.
     }
     
     return NextResponse.json({
       success: true,
-      message: 'Artista creado exitosamente. Se ha enviado un email con las credenciales temporales.',
+      message: `Usuario con rol '${rol}' creado exitosamente. Se ha enviado un email con las credenciales temporales.`,
       usuario: {
         id: usuario.id,
         email: usuario.email,
         nombreCompleto: usuario.nombreCompleto
       },
-      // En desarrollo, devolver la contraseña temporal (asegúrate de QUITAR ESTO EN PRODUCCIÓN)
       ...(process.env.NODE_ENV === 'development' && { tempPassword })
     }, { status: 201 });
 
