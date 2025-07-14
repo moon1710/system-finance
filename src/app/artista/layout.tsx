@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Sidebar from './components/Sidebar'
-
+import { Toaster } from 'sonner' // 1. Importar el componente Toaster
 
 interface User {
     nombreCompleto: string
@@ -75,22 +75,18 @@ export default function ArtistaLayout({
         return null // Redirigiendo...
     }
 
-    // REEMPLAZA TU RETURN CON ESTO
     return (
         <div className="flex min-h-screen bg-[#f7f7f7]">
-            {/* 1. Sidebar con 'sticky' */}
             <Sidebar user={user} onLogout={handleLogout} />
 
-            {/* 2. Main simplificado para permitir scroll global */}
             <main className="flex-1 flex flex-col w-full">
-                <div className="flex-1 p-4 md:p-6 lg:p-8">
+                <div className="flex-1">
                     {children}
                 </div>
-
-                <footer className="w-full bg-white border-t border-gray-200 p-4 text-center text-sm text-gray-500">
-                    © 2025 Sistema de Gestión Financiera
-                </footer>
             </main>
+
+            {/* 2. Añadir el componente Toaster aquí. Se posicionará de forma fija. */}
+            <Toaster richColors position="top-right" closeButton />
         </div>
     )
 }
