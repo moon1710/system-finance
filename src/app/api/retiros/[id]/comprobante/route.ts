@@ -7,7 +7,7 @@ import { writeFile, readFile, stat } from 'fs/promises'
 import { existsSync } from 'fs'
 import path from 'path'
 import { PrismaClient } from '@prisma/client'
-import { enviarActualizacionEstado } from '@/lib/emailService'
+import { enviarActualizacionEstado } from '@/lib/email/emailService'
 
 const prisma = new PrismaClient()
 

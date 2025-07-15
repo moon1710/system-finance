@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recuperación de Contraseña</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #ffc107; color: #212529; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { background: #f8f9fa; padding: 25px; border: 1px solid #dee2e6; }
+        .footer { background: #343a40; color: white; padding: 15px; text-align: center; border-radius: 0 0 8px 8px; }
+        .button { display: inline-block; background: #007bff; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold; }
+        .warning { background: #fff3cd; color: #856404; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #ffc107; }
+        .security-note { background: #d1ecf1; color: #0c5460; padding: 10px; border-radius: 5px; margin: 15px 0; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔐 Recuperación de Contraseña</h1>
+        <p>Restablece tu acceso de forma segura</p>
+    </div>
+
+    <div class="content">
+        <p>Hola,</p>
+        
+        <p>Has solicitado restablecer tu contraseña en <strong>Sistema de Pagos</strong>.</p>
+
+        <div class="warning">
+            <strong>⏰ Enlace temporal:</strong> Este enlace es válido por un tiempo limitado por motivos de seguridad.
+        </div>
+
+        <p>Haz clic en el siguiente enlace para crear tu nueva contraseña:</p>
+        
+        <div style="text-align: center;">
+            <a href="{{recoveryLink}}" class="button">🔑 Restablecer mi contraseña</a>
+        </div>
+
+        <p><strong>También puedes copiar y pegar este enlace en tu navegador:</strong></p>
+        <p style="background: #e9ecef; padding: 10px; border-radius: 5px; word-break: break-all; font-family: monospace; font-size: 0.9em;">
+            {{recoveryLink}}
+        </p>
+
+        <div class="security-note">
+            <strong>🛡️ Nota de seguridad:</strong>
+            <ul style="margin: 5px 0; padding-left: 20px;">
+                <li>Solo usa enlaces de recuperación que hayas solicitado</li>
+                <li>Nunca compartas este enlace con nadie</li>
+                <li>Si no solicitaste este cambio, ignora este correo</li>
+            </ul>
+        </div>
+
+        <p>Si tienes problemas con el enlace o no solicitaste este cambio, por favor contacta a nuestro equipo de soporte.</p>
+        
+        <p>Gracias por mantener tu cuenta segura.</p>
+    </div>
+
+    <div class="footer">
+        <p>Saludos cordiales,<br>
+        El equipo de <strong>Sistema de Pagos</strong></p>
+        <p style="font-size: 0.9em; opacity: 0.8;">
+            Este es un email de seguridad. No respondas a este mensaje.
+        </p>
+    </div>
+</body>
+</html>

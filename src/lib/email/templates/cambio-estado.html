@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Actualización de Estado</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #007bff; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { background: #f8f9fa; padding: 25px; border: 1px solid #dee2e6; }
+        .footer { background: #343a40; color: white; padding: 15px; text-align: center; border-radius: 0 0 8px 8px; }
+        .status-box { padding: 15px; border-radius: 5px; margin: 15px 0; text-align: center; font-weight: bold; }
+        .status-aprobado { background: #d1ecf1; color: #0c5460; }
+        .status-completado { background: #d4edda; color: #155724; }
+        .status-rechazado { background: #f8d7da; color: #721c24; }
+        .motivo { background: #fff3cd; color: #856404; padding: 10px; border-radius: 5px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📋 Actualización de Estado</h1>
+    </div>
+
+    <div class="content">
+        <p>Hola <strong>{{nombreCompleto}}</strong>,</p>
+        
+        {{#if mensaje}}
+            <p>{{mensaje}}</p>
+        {{else}}
+            <p>Tu solicitud de retiro por <strong>{{montoFormateado}}</strong> ha cambiado de estado:</p>
+            
+            <div class="status-box status-{{estado|lower}}">
+                Estado actual: <strong>{{estado|upper}}</strong>
+            </div>
+
+            {{#if motivo}}
+                <div class="motivo">
+                    <strong>Motivo:</strong> {{motivo}}
+                </div>
+            {{/if}}
+
+            {{#if estado === 'Aprobado'}}
+                <p>Tu solicitud ha sido aprobada y está siendo procesada. Te notificaremos cuando el pago sea completado.</p>
+            {{else if estado === 'Rechazado'}}
+                <p>Lamentamos informarte que tu solicitud no pudo ser procesada. Si tienes preguntas, contacta a soporte.</p>
+            {{else}}
+                <p>Te mantendremos informado de cualquier cambio adicional.</p>
+            {{/if}}
+        {{/if}}
+        
+        <p>Gracias por usar nuestra plataforma.</p>
+    </div>
+
+    <div class="footer">
+        <p>Saludos cordiales,<br>
+        El equipo de <strong>Sistema de Pagos</strong></p>
+    </div>
+</body>
+</html>

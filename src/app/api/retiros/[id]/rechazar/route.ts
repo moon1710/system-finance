@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getIronSession } from 'iron-session';
 import { sessionOptions, SessionData } from '@/lib/session';
 import { rechazarRetiro } from '@/lib/services/retiros';
-import { enviarActualizacionEstado } from '@/lib/emailService';
+import { enviarActualizacionEstado } from '@/lib/email/emailService';
 import { prisma } from '@/lib/db';
 
 interface RouteParams {

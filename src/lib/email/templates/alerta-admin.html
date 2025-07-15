@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alerta de Nueva Solicitud de Retiro</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #dc3545; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        .alert-icon { font-size: 2em; margin-bottom: 10px; }
+        .content { background: #f8f9fa; padding: 25px; border: 1px solid #dee2e6; }
+        .footer { background: #343a40; color: white; padding: 15px; text-align: center; border-radius: 0 0 8px 8px; }
+        .details { background: white; padding: 20px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #dc3545; }
+        .details ul { list-style: none; padding: 0; }
+        .details li { padding: 8px 0; border-bottom: 1px solid #eee; }
+        .details li:last-child { border-bottom: none; }
+        .details strong { color: #dc3545; }
+        .button { display: inline-block; background: #dc3545; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; margin: 15px 0; }
+        .priority { background: #f8d7da; color: #721c24; padding: 15px; border-radius: 5px; text-align: center; font-weight: bold; margin: 15px 0; }
+        .criteria { background: #fff3cd; color: #856404; padding: 10px; border-radius: 5px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="alert-icon">⚠️</div>
+        <h1>ALERTA - Nueva Solicitud de Retiro</h1>
+        <p>Requiere Revisión Inmediata</p>
+    </div>
+
+    <div class="content">
+        <p>Hola <strong>{{nombreAdmin}}</strong>,</p>
+        
+        <div class="priority">
+            🚨 SOLICITUD DE ALTA PRIORIDAD 🚨
+        </div>
+
+        <p>El artista <strong>{{nombreArtista}}</strong> ha generado una nueva solicitud de retiro que cumple criterios de alerta y requiere tu revisión inmediata:</p>
+
+        <div class="details">
+            <ul>
+                <li><strong>ID de solicitud:</strong> {{solicitudId}}</li>
+                <li><strong>Artista:</strong> {{nombreArtista}}</li>
+                <li><strong>Monto:</strong> ${{monto}} USD</li>
+                <li><strong>Cuenta destino:</strong> {{nombreBanco}} – {{tipoCuenta}} ({{ultimosDigitos}})</li>
+                <li><strong>Fecha de envío:</strong> {{fecha}}</li>
+            </ul>
+        </div>
+
+        <div class="criteria">
+            <strong>Criterio de alerta:</strong> {{criterioAlerta}}
+        </div>
+
+        <p>Accede al panel de administración para validar, aprobar o rechazar esta solicitud y, en caso de aprobación, subir el comprobante correspondiente:</p>
+        
+        <div style="text-align: center;">
+            <a href="{{urlPanelAdmin}}" class="button">🔍 Revisar Solicitud</a>
+        </div>
+
+        <p><strong>Gracias por atenderla con la prioridad necesaria.</strong></p>
+    </div>
+
+    <div class="footer">
+        <p>Saludos,<br>
+        El equipo de <strong>Sistema de Pagos</strong></p>
+        <p style="font-size: 0.9em; opacity: 0.8;">
+            Este es un email automático de alerta. Responde rápidamente para mantener la calidad del servicio.
+        </p>
+    </div>
+</body>
+</html>

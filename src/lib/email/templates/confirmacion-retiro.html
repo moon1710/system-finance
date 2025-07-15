@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmación de Solicitud de Retiro</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #007bff; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { background: #f8f9fa; padding: 25px; border: 1px solid #dee2e6; }
+        .footer { background: #343a40; color: white; padding: 15px; text-align: center; border-radius: 0 0 8px 8px; }
+        .details { background: white; padding: 20px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #007bff; }
+        .details ul { list-style: none; padding: 0; }
+        .details li { padding: 8px 0; border-bottom: 1px solid #eee; }
+        .details li:last-child { border-bottom: none; }
+        .details strong { color: #007bff; }
+        .button { display: inline-block; background: #007bff; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; margin: 15px 0; }
+        .status { background: #fff3cd; color: #856404; padding: 10px; border-radius: 5px; text-align: center; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>✅ Solicitud de Retiro Confirmada</h1>
+        <p>ID: <strong>#{{solicitudId}}</strong></p>
+    </div>
+
+    <div class="content">
+        <p>Hola <strong>{{nombreArtista}}</strong>,</p>
+        
+        <p>Hemos recibido correctamente tu solicitud de retiro. A continuación, los detalles de tu petición:</p>
+
+        <div class="details">
+            <ul>
+                <li><strong>ID de solicitud:</strong> {{solicitudId}}</li>
+                <li><strong>Monto:</strong> ${{monto}} USD</li>
+                <li><strong>Cuenta destino:</strong> {{nombreBanco}} – {{tipoCuenta}} ({{ultimosDigitos}})</li>
+                <li><strong>Fecha de envío:</strong> {{fecha}}</li>
+            </ul>
+        </div>
+
+        <div class="status">
+            <strong>Estado actual:</strong> Pendiente
+        </div>
+
+        <p>Puedes seguir el progreso de tu solicitud en tu panel de artista:</p>
+        <div style="text-align: center;">
+            <a href="{{urlPanelArtista}}" class="button">Ver Panel de Artista</a>
+        </div>
+
+        <p>Te notificaremos automáticamente cuando tu solicitud cambie de estado (Procesando, Completado o Rechazado).</p>
+        
+        <p><strong>¡Gracias por usar nuestro Sistema de Pagos!</strong></p>
+    </div>
+
+    <div class="footer">
+        <p>Saludos cordiales,<br>
+        El equipo de <strong>Sistema de Pagos</strong></p>
+    </div>
+</body>
+</html>

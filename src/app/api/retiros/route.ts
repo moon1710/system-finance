@@ -10,7 +10,7 @@ import {
 import {
   enviarConfirmacionRetiro,
   enviarAlertaAdmin,
-} from "@/lib/emailService";
+} from "@/lib/email/emailService";
 import { prisma } from "@/lib/db"; // Necesario para obtener datos del artista y de los administradores
 
 /**
