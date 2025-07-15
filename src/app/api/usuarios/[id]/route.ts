@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { prisma } from '@/lib/db'
+import { PrismaClient } from '@prisma/client'
 import { getIronSession } from 'iron-session'
 import { sessionOptions, SessionData } from '@/lib/session'
+import { cookies } from 'next/headers' // Importar cookies de next/headers
 
-const updateUserSchema = z.object({
-  nombreCompleto: z.string().min(3).max(100).optional(),
-  estadoCuenta: z.enum(['Activa', 'Bloqueada']).optional(),
-})
+const prisma = new PrismaClient()
 
 // GET - Obtener detalles de un artista
 export async function GET(
@@ -15,7 +13,10 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getIronSession<SessionData>(request, NextResponse.next(), sessionOptions)
+    // --- SOLUCIÓN DEFINITIVA ---
+    // Se obtiene la sesión usando el store de cookies de Next.js.
+    // Esto no interfiere con el objeto `request` ni con `params`.
+    const session = await getIronSession<SessionData>(cookies(), sessionOptions)
     
     if (!session.isLoggedIn || session.rol !== 'admin') {
       return NextResponse.json(
@@ -24,55 +25,62 @@ export async function GET(
       )
     }
     
-    // Verificar que el admin tenga acceso a este artista
-    const relacion = await prisma.adminArtistaRelacion.findUnique({
-      where: {
-        adminId_artistaId: {
-          adminId: session.userId,
-          artistaId: params.id
-        }
-      }
-    })
-    
-    if (!relacion) {
-      return NextResponse.json(
-        { error: 'No tienes acceso a este artista' },
-        { status: 403 }
-      )
-    }
-    
-    // Obtener datos del artista
-    const usuario = await prisma.usuario.findUnique({
-      where: { id: params.id },
-      include: {
-        cuentasBancarias: true,
-        retiros: {
-          orderBy: { fechaSolicitud: 'desc' },
-          take: 10
-        },
-        notasRecibidas: {
-          include: {
-            admin: {
-              select: {
-                nombreCompleto: true
-              }
-            }
+    const { id } = params;
+
+    // Obtener datos del artista y sus métricas
+    const artista = await prisma.usuario.findUnique({
+      where: { id },
+      select: {
+          id: true,
+          nombreCompleto: true,
+          email: true,
+          estadoCuenta: true,
+          createdAt: true,
+          _count: {
+              select: { retiros: true }
           },
-          orderBy: { createdAt: 'desc' }
-        }
+          retiros: {
+              orderBy: {
+                  fechaSolicitud: 'desc'
+              },
+              take: 10,
+              select: {
+                  id: true,
+                  montoSolicitado: true,
+                  estado: true,
+                  fechaSolicitud: true,
+              }
+          }
       }
-    })
+    });
     
-    if (!usuario) {
+    if (!artista) {
       return NextResponse.json(
         { error: 'Usuario no encontrado' },
         { status: 404 }
       )
     }
+
+    // Calcular métricas adicionales
+    const retirosCompletados = await prisma.retiro.aggregate({
+        _sum: { montoSolicitado: true },
+        where: { usuarioId: id, estado: 'Completado' },
+    });
+
+    const retirosPendientes = await prisma.retiro.aggregate({
+        _sum: { montoSolicitado: true },
+        where: { usuarioId: id, estado: 'Pendiente' },
+    });
+
+    const artistaDetallado = {
+        ...artista,
+        montoTotalRetirado: retirosCompletados._sum.montoSolicitado || 0,
+        montoPendiente: retirosPendientes._sum.montoSolicitado || 0,
+    };
     
     return NextResponse.json({
       success: true,
-      usuario
+      artista: artistaDetallado
     })
   } catch (error) {
     console.error('Error obteniendo usuario:', error)
@@ -89,7 +97,8 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getIronSession<SessionData>(request, NextResponse.next(), sessionOptions)
+    // Aplicar la misma corrección aquí
+    const session = await getIronSession<SessionData>(cookies(), sessionOptions)
     
     if (!session.isLoggedIn || session.rol !== 'admin') {
       return NextResponse.json(
@@ -98,39 +107,31 @@ export async function PATCH(
       )
     }
     
-    // Verificar acceso
-    const relacion = await prisma.adminArtistaRelacion.findUnique({
-      where: {
-        adminId_artistaId: {
-          adminId: session.userId,
-          artistaId: params.id
-        }
+    const { id } = params;
+    const body = await request.json()
+    
+    const updateUserStatusSchema = z.object({
+        estado: z.enum(['Activa', 'Inactiva']),
+    });
+    const data = updateUserStatusSchema.parse(body)
+    
+    const usuario = await prisma.usuario.update({
+      where: { id },
+      data: {
+        estadoCuenta: data.estado
       }
     })
     
-    if (!relacion) {
-      return NextResponse.json(
-        { error: 'No tienes acceso a este artista' },
-        { status: 403 }
-      )
-    }
-    
-    const body = await request.json()
-    const data = updateUserSchema.parse(body)
-    
-    const usuario = await prisma.usuario.update({
-      where: { id: params.id },
-      data
-    })
-    
-    // Log de auditoría
-    console.log(`[AUDIT] Admin ${session.userId} actualizó usuario ${params.id}`)
+    console.log(`[AUDIT] Admin ${session.userId} actualizó estado del usuario ${id} a ${data.estado}`)
     
     return NextResponse.json({
       success: true,
       usuario
     })
   } catch (error) {
+    if (error instanceof z.ZodError) {
+        return NextResponse.json({ error: 'Datos inválidos', issues: error.errors }, { status: 400 });
+    }
     console.error('Error actualizando usuario:', error)
     return NextResponse.json(
       { error: 'Error al actualizar usuario' },

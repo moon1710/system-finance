@@ -27,11 +27,13 @@ export async function GET(request: NextRequest) {
     const artistas = await prisma.usuario.findMany({
       where: {
         rol: 'artista',
+        /*
         adminAsignado: {
           some: {
             adminId: session.userId
           }
         }
+          */
       },
       select: {
         id: true,

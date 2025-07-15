@@ -40,7 +40,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
         { href: "/admin", icon: Home, label: "Dashboard" },
         { href: "/admin/artistas", icon: CreditCard, label: "Mis Cuentas" },
         { href: "/admin/retiros", icon: Download, label: "Retiros" },
-        { href: "/admin/alertas", icon: Settings, label: "Alertas" },
+        { href: "/admin/configuracion", icon: Settings, label: "Configuracion" },
     ];
 
     const MenuItem: React.FC<MenuItemProps> = ({ href, icon: Icon, label }) => {
