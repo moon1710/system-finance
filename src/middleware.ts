@@ -34,6 +34,12 @@ const PUBLIC_ROUTES = [
   '/api/setup', // temporal para desarrollo
 ]
 
+// 🔧 RUTAS ESPECIALES QUE NO NECESITAN VALIDACIÓN DE ORIGEN
+// (Pero sí necesitan autenticación de sesión)
+const SPECIAL_API_ROUTES = [
+  '/api/retiros/', // Para comprobantes
+]
+
 // Función para obtener IP del cliente
 function getClientIp(request: NextRequest): string {
   const forwarded = request.headers.get('x-forwarded-for')
@@ -52,9 +58,19 @@ function isValidOrigin(request: NextRequest): boolean {
   ) || (process.env.NODE_ENV !== 'production' && checkOrigin.includes('.devtunnels.ms'))
 }
 
+// 🔧 NUEVA FUNCIÓN: Verificar si es una ruta especial
+function isSpecialApiRoute(pathname: string): boolean {
+  return SPECIAL_API_ROUTES.some(route => pathname.includes(route))
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   const clientIp = getClientIp(request)
+  
+  console.log('=== MIDDLEWARE DEBUG ===')
+  console.log('URL:', pathname)
+  console.log('Origin:', request.headers.get('origin'))
+  console.log('Referer:', request.headers.get('referer'))
   
   // Crear response con headers de seguridad
   const response = NextResponse.next()
@@ -62,13 +78,20 @@ export async function middleware(request: NextRequest) {
     response.headers.set(key, value)
   })
 
-  // Verificar origen para peticiones API
-  if (pathname.startsWith('/api/') && !isValidOrigin(request)) {
-    console.warn(`Origen inválido detectado: ${request.headers.get('origin')}`)
-    return new NextResponse(
-      JSON.stringify({ error: 'Origen no autorizado' }),
-      { status: 403, headers: { 'Content-Type': 'application/json' } }
-    )
+  // 🛡️ VERIFICAR ORIGEN PARA APIS (CON EXCEPCIONES)
+  if (pathname.startsWith('/api/')) {
+    // ✅ PERMITIR rutas especiales sin validación de origen
+    if (isSpecialApiRoute(pathname)) {
+      console.log('✅ Ruta especial detectada, saltando validación de origen:', pathname)
+    } 
+    // ❌ VALIDAR origen para otras APIs
+    else if (!isValidOrigin(request)) {
+      console.warn(`❌ Origen inválido detectado: ${request.headers.get('origin')} para ${pathname}`)
+      return new NextResponse(
+        JSON.stringify({ error: 'Origen no autorizado' }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
   }
 
   // Verificar si la IP está bloqueada por intentos fallidos
@@ -105,6 +128,7 @@ export async function middleware(request: NextRequest) {
     
     // Verificar si hay sesión
     if (!session.isLoggedIn) {
+      console.log('❌ No hay sesión válida para:', pathname)
       if (pathname.startsWith('/api/')) {
         return new NextResponse(
           JSON.stringify({ error: 'No autorizado', code: 'NO_SESSION' }),
@@ -114,10 +138,12 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/login', request.url))
     }
 
+    console.log('✅ Sesión válida:', { userId: session.userId, rol: session.rol })
+
     // Verificar permisos por rol
     if (pathname.startsWith('/admin')) {
       if (session.rol !== 'admin') {
-        console.warn(`Acceso denegado: Usuario ${session.userId} intentó acceder a /admin`)
+        console.warn(`❌ Acceso denegado: Usuario ${session.userId} intentó acceder a /admin`)
         return NextResponse.redirect(new URL('/artista', request.url))
       }
     }
@@ -128,6 +154,18 @@ export async function middleware(request: NextRequest) {
       }
     }
 
+    // 🔧 VERIFICACIÓN ESPECIAL PARA COMPROBANTES
+    if (pathname.includes('/api/retiros/') && pathname.includes('/comprobante')) {
+      if (session.rol !== 'admin') {
+        console.warn(`❌ Acceso denegado a comprobante: Usuario ${session.userId} no es admin`)
+        return new NextResponse(
+          JSON.stringify({ error: 'Solo administradores pueden ver comprobantes' }),
+          { status: 403, headers: { 'Content-Type': 'application/json' } }
+        )
+      }
+      console.log('✅ Acceso a comprobante autorizado para admin:', session.userId)
+    }
+
     // Agregar información de seguridad a los headers
     response.headers.set('X-User-Id', session.userId)
     response.headers.set('X-User-Role', session.rol)
@@ -135,7 +173,7 @@ export async function middleware(request: NextRequest) {
     return response
 
   } catch (error) {
-    console.error('Error crítico en middleware:', error)
+    console.error('💥 Error crítico en middleware:', error)
     
     if (pathname.startsWith('/api/')) {
       return new NextResponse(

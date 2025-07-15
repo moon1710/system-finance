@@ -264,7 +264,7 @@ const SolicitudCard = ({ solicitud, onAction }) => {
                     {estado === 'Completado' && urlComprobante && (
                         <motion.a
                             whileHover={{ scale: 1.03 }}
-                            href={urlComprobante}
+                            href={`/api/retiros/${id}/comprobante`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="px-3 py-1.5 text-sm font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-md transition-all duration-200 flex items-center gap-1.5"
@@ -649,7 +649,7 @@ export default function AdminRetirosPage() {
                             )}
                         </div>
 
-                        <div className="relative">
+                            <div className="relative">
                             <select
                                 value={filtroEstado}
                                 onChange={(e) => setFiltroEstado(e.target.value)}
