@@ -390,7 +390,7 @@ export default function AlertasDashboard() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <button
                         onClick={() => router.push(`/admin/retiros/${solicitud.id}`)}
-                        className="text-blue-600 hover:text-blue-900 font-medium"
+                        className="text-blue-600 hover:text-sky-950 font-medium"
                       >
                         Revisar →
                       </button>
