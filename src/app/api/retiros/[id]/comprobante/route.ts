@@ -7,6 +7,7 @@ import { writeFile, readFile, stat } from 'fs/promises'
 import { existsSync } from 'fs'
 import path from 'path'
 import { PrismaClient } from '@prisma/client'
+import { enviarActualizacionEstado } from '@/lib/emailService'
 
 const prisma = new PrismaClient()
 
@@ -22,207 +23,147 @@ interface RouteParams {
  */
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
+    // ✅ FIX 1: Await params para Next.js 15
     const { id } = await params
     
-    console.log('=== SUBIR COMPROBANTE ===')
-    console.log('ID retiro:', id)
-    
-    // Verificar autenticación
+    // Verificación de sesión
     const session = await getIronSession<SessionData>(request, new NextResponse(), sessionOptions)
-    
-    if (!session.isLoggedIn || !session.userId) {
-      return NextResponse.json(
-        { error: 'Usuario no autenticado' },
-        { status: 401 }
-      )
+    if (!session.isLoggedIn || session.rol !== 'admin') {
+      return NextResponse.json({ error: 'Acceso no autorizado' }, { status: 403 })
     }
 
-    // Solo admins pueden subir comprobantes
-    if (session.rol !== 'admin') {
-      return NextResponse.json(
-        { error: 'Solo los administradores pueden subir comprobantes' },
-        { status: 403 }
-      )
-    }
-
-    if (!id) {
-      return NextResponse.json(
-        { error: 'ID de retiro requerido' },
-        { status: 400 }
-      )
-    }
-
-    // Obtener archivo del FormData
+    // Validación de archivo
     const formData = await request.formData()
     const archivo = formData.get('comprobante') as File
-
     if (!archivo) {
-      return NextResponse.json(
-        { error: 'No se ha enviado ningún archivo' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'No se ha enviado ningún archivo' }, { status: 400 })
     }
 
-    // Validar archivo
-    const maxSize = 5 * 1024 * 1024 // 5MB
-    if (archivo.size > maxSize) {
-      return NextResponse.json(
-        { error: 'El archivo no puede exceder 5MB' },
-        { status: 400 }
-      )
+    // Verificar retiro existente
+    const retiro = await prisma.retiro.findUnique({ where: { id } })
+    if (!retiro || retiro.estado !== 'Procesando') {
+      return NextResponse.json({ error: 'Retiro no válido para esta operación' }, { status: 400 })
     }
 
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png']
-    if (!allowedTypes.includes(archivo.type)) {
-      return NextResponse.json(
-        { error: 'Tipo de archivo no válido. Use PDF, JPG o PNG' },
-        { status: 400 }
-      )
-    }
-
-    // Obtener retiro y verificar estado
-    const retiro = await prisma.retiro.findUnique({
-      where: { id }
-    })
-
-    if (!retiro) {
-      return NextResponse.json(
-        { error: 'Retiro no encontrado' },
-        { status: 404 }
-      )
-    }
-
-    if (retiro.estado !== 'Procesando') {
-      return NextResponse.json(
-        { error: 'Solo se pueden subir comprobantes a retiros en estado "Procesando"' },
-        { status: 400 }
-      )
-    }
-
-    // Crear directorio uploads/comprobantes
+    // Crear directorio y guardar archivo
     const uploadsDir = path.join(process.cwd(), 'uploads', 'comprobantes')
-    
     try {
       await stat(uploadsDir)
     } catch {
-      const { mkdir } = require('fs/promises')
+      const { mkdir } = await import('fs/promises')
       await mkdir(uploadsDir, { recursive: true })
-      console.log('Directorio uploads creado:', uploadsDir)
     }
 
-    // Generar nombre único para el archivo
     const timestamp = Date.now()
     const extension = path.extname(archivo.name)
     const nombreArchivo = `comprobante_${id}_${timestamp}${extension}`
     const rutaArchivo = path.join(uploadsDir, nombreArchivo)
-
-    // Guardar archivo
-    const arrayBuffer = await archivo.arrayBuffer()
-    const buffer = Buffer.from(arrayBuffer)
+    const buffer = Buffer.from(await archivo.arrayBuffer())
     await writeFile(rutaArchivo, buffer)
-
-    // URL para la BD
     const urlComprobante = `uploads/comprobantes/${nombreArchivo}`
 
-    // Completar el retiro
+    // ✅ FIX 2: Actualizar retiro SIN include para obtener todos los campos
     const retiroActualizado = await prisma.retiro.update({
       where: { id },
       data: {
         estado: 'Completado',
         urlComprobante: urlComprobante,
         fechaActualizacion: new Date()
-      },
-      include: {
-        usuario: {
-          select: {
-            nombreCompleto: true,
-            email: true
-          }
-        }
       }
     })
+
+    // ✅ FIX 3: Obtener datos del usuario por separado
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: retiroActualizado.usuarioId },
+      select: {
+        nombreCompleto: true,
+        email: true
+      }
+    })
+
+    console.log('🔍 Datos para email:', {
+      email: usuario?.email,
+      nombreCompleto: usuario?.nombreCompleto,
+      monto: retiroActualizado.montoSolicitado,
+      montoType: typeof retiroActualizado.montoSolicitado
+    })
+
+    // Enviar email de notificación
+    try {
+      if (usuario?.email && usuario?.nombreCompleto && retiroActualizado.montoSolicitado !== null) {
+        console.log('📧 INTENTANDO ENVIAR EMAIL...')
+        
+        // Convertir Decimal a number para el email
+        const montoNumerico = Number(retiroActualizado.montoSolicitado)
+        
+        await enviarActualizacionEstado(
+          usuario.email,
+          'Completado',
+          usuario.nombreCompleto,
+          montoNumerico
+        )
+        
+        console.log(`✅ [EMAIL] Notificación de retiro 'Completado' enviada a: ${usuario.email}`)
+      } else {
+        console.warn(`❌ [EMAIL WARN] Faltan datos del usuario o monto es null`, {
+          email: usuario?.email,
+          nombre: usuario?.nombreCompleto,
+          monto: retiroActualizado.montoSolicitado
+        })
+      }
+    } catch (emailError) {
+      console.error(`💥 [EMAIL ERROR] Error completo:`, emailError)
+    }
 
     return NextResponse.json({
       success: true,
       mensaje: 'Comprobante subido y retiro completado exitosamente',
       data: {
         urlComprobante,
-        retiro: retiroActualizado
+        retiro: {
+          ...retiroActualizado,
+          usuario
+        }
       }
     })
 
   } catch (error) {
     console.error('Error al subir comprobante:', error)
-    return NextResponse.json(
-      { error: 'Error interno del servidor al subir el comprobante' },
-      { status: 500 }
-    )
+    const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
+    return NextResponse.json({ error: 'Error interno del servidor al subir el comprobante' }, { status: 500 })
   }
 }
 
 /**
  * GET /api/retiros/[id]/comprobante
- * Descargar comprobante - VERSION CON DEBUG COMPLETO
+ * Descargar comprobante
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     console.log('=== DEBUG GET COMPROBANTE ===')
     
-    const { id } = params
+    // ✅ FIX 4: Await params para Next.js 15
+    const { id } = await params
     console.log('1. ID recibido:', id)
     
-    // HEADERS DEBUG
-    console.log('2. Headers de la petición:')
-    console.log('   - Origin:', request.headers.get('origin'))
-    console.log('   - Referer:', request.headers.get('referer'))
-    console.log('   - User-Agent:', request.headers.get('user-agent'))
-    console.log('   - Cookie:', request.headers.get('cookie'))
-    
-    // Verificar sesión paso a paso
-    console.log('3. Obteniendo sesión...')
+    // Verificar sesión
     const session = await getIronSession<SessionData>(request, new NextResponse(), sessionOptions)
     
-    console.log('4. Estado de la sesión:')
-    console.log('   - isLoggedIn:', session.isLoggedIn)
-    console.log('   - userId:', session.userId)
-    console.log('   - rol:', session.rol)
-    
-    // PRIMERA VERIFICACIÓN: Sesión
     if (!session.isLoggedIn) {
-      console.log('❌ Error: Usuario no logueado')
       return NextResponse.json({ 
         error: 'Usuario no autenticado',
         debug: 'session.isLoggedIn es false'
       }, { status: 401 })
     }
     
-    if (!session.userId) {
-      console.log('❌ Error: No hay userId en sesión')
-      return NextResponse.json({ 
-        error: 'Usuario no autenticado',
-        debug: 'session.userId es null/undefined'
-      }, { status: 401 })
-    }
-    
-    // SEGUNDA VERIFICACIÓN: Rol
     if (session.rol !== 'admin') {
-      console.log('❌ Error: Usuario no es admin, rol actual:', session.rol)
       return NextResponse.json({ 
         error: 'Acceso denegado - Solo administradores',
         debug: `Rol actual: ${session.rol}, requerido: admin`
       }, { status: 403 })
     }
-    
-    console.log('✅ Verificaciones de sesión pasadas')
 
-    // TERCERA VERIFICACIÓN: ID
-    if (!id) {
-      console.log('❌ Error: ID no proporcionado')
-      return NextResponse.json({ error: 'ID de retiro requerido' }, { status: 400 })
-    }
-
-    // CUARTA VERIFICACIÓN: Retiro en BD
-    console.log('5. Buscando retiro en BD...')
+    // Buscar retiro
     const retiro = await prisma.retiro.findUnique({
       where: { id },
       include: {
@@ -235,48 +176,32 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       }
     })
 
-    console.log('6. Retiro encontrado:', {
-      existe: !!retiro,
-      estado: retiro?.estado,
-      tieneComprobante: !!retiro?.urlComprobante
-    })
-
     if (!retiro) {
-      console.log('❌ Error: Retiro no encontrado en BD')
       return NextResponse.json({ error: 'Retiro no encontrado' }, { status: 404 })
     }
 
     if (!retiro.urlComprobante) {
-      console.log('❌ Error: Retiro sin comprobante')
       return NextResponse.json({ error: 'Este retiro no tiene comprobante' }, { status: 404 })
     }
 
     if (retiro.estado !== 'Completado') {
-      console.log('❌ Error: Retiro no completado, estado:', retiro.estado)
       return NextResponse.json({ 
         error: 'Solo se pueden ver comprobantes de retiros completados',
         debug: `Estado actual: ${retiro.estado}`
       }, { status: 400 })
     }
 
-    // QUINTA VERIFICACIÓN: Archivo físico
-    console.log('7. Verificando archivo físico...')
+    // Verificar archivo físico
     const rutaArchivo = path.join(process.cwd(), retiro.urlComprobante)
-    console.log('   - Ruta construida:', rutaArchivo)
-    console.log('   - URL en BD:', retiro.urlComprobante)
-
+    
     if (!existsSync(rutaArchivo)) {
-      console.log('❌ Error: Archivo no encontrado en el sistema de archivos')
-      console.log('   - Ruta buscada:', rutaArchivo)
       return NextResponse.json({ 
         error: 'Archivo no encontrado en el servidor',
         debug: `Archivo buscado en: ${rutaArchivo}`
       }, { status: 404 })
     }
 
-    console.log('✅ Archivo encontrado, leyendo...')
-
-    // SERVIR ARCHIVO
+    // Servir archivo
     const archivoBuffer = await readFile(rutaArchivo)
     const stats = await stat(rutaArchivo)
     const nombreArchivo = path.basename(rutaArchivo)
@@ -289,31 +214,20 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       case '.png': mimeType = 'image/png'; break
     }
 
-    console.log('8. Sirviendo archivo:')
-    console.log('   - Nombre:', nombreArchivo)
-    console.log('   - Tamaño:', stats.size, 'bytes')
-    console.log('   - MIME Type:', mimeType)
-
     const response = new NextResponse(archivoBuffer)
     response.headers.set('Content-Type', mimeType)
     response.headers.set('Content-Length', stats.size.toString())
     response.headers.set('Content-Disposition', `inline; filename="${nombreArchivo}"`)
-    
-    // HEADERS ADICIONALES PARA EVITAR PROBLEMAS DE CORS/ORIGEN
     response.headers.set('Access-Control-Allow-Origin', '*')
-    response.headers.set('Access-Control-Allow-Methods', 'GET')
-    response.headers.set('Access-Control-Allow-Headers', 'Content-Type')
     
-    console.log('✅ Archivo servido exitosamente')
     return response
 
   } catch (error) {
     console.error('💥 ERROR CRÍTICO en GET comprobante:', error)
-    console.error('Stack trace:', error.stack)
-    
+    const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
     return NextResponse.json({
       error: 'Error interno del servidor',
-      debug: error.message,
+      debug: errorMessage,
       timestamp: new Date().toISOString()
     }, { status: 500 })
   }

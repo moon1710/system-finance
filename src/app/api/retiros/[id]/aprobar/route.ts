@@ -61,23 +61,27 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     try {
       const retiroAprobado = resultado.data;
-      if (retiroAprobado && retiroAprobado.usuarioId) {
-        const artista = await prisma.usuario.findUnique({
-          where: { id: retiroAprobado.usuarioId },
-          select: { email: true }
-        });
+      
+      // Obtener todos los datos necesarios en una sola consulta
+      const artista = await prisma.usuario.findUnique({
+        where: { id: retiroAprobado.usuarioId },
+        select: { email: true, nombreCompleto: true }
+      });
 
-        if (artista && artista.email) {
-          await enviarActualizacionEstado(artista.email, retiroAprobado.estado);
-          console.log(`[EMAIL] Notificación de estado (${retiroAprobado.estado}) enviada a artista: ${artista.email} para retiro ${id}`);
-        } else {
-          console.warn(`[EMAIL WARN] No se encontró email para el usuario del retiro ${id} al aprobar.`);
-        }
+      if (artista?.email && artista.nombreCompleto) {
+        // Llamar a la nueva función con todos los parámetros
+        await enviarActualizacionEstado(
+          artista.email,
+          retiroAprobado.estado as 'Aprobado' | 'Completado' | 'Rechazado', // Cast para seguridad de tipos
+          artista.nombreCompleto,
+          retiroAprobado.monto
+        );
+        console.log(`[EMAIL] Notificación de estado (${retiroAprobado.estado}) enviada a artista: ${artista.email}`);
       } else {
-        console.warn(`[EMAIL WARN] Datos de retiro incompletos para enviar notificación de aprobación para retiro ${id}.`);
+        console.warn(`[EMAIL WARN] Datos de artista incompletos para retiro ${id}.`);
       }
     } catch (emailError) {
-      console.error(`[EMAIL ERROR] Fallo al enviar email de actualización de estado para aprobación de retiro ${id}:`, emailError);
+      console.error(`[EMAIL ERROR] Fallo al enviar email de aprobación para retiro ${id}:`, emailError);
     }
 
     return NextResponse.json({

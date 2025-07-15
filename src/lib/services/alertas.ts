@@ -197,7 +197,7 @@ async function detectarAlertas(
   if (retirosDelMes > ALERT_THRESHOLDS.MAX_RETIROS_MES) {
     alertas.push({
       tipo: TipoAlerta.RETIROS_MULTIPLES,
-      mensaje: `${retirosDelMes + 1}° retiro del mes`,
+      mensaje: `${retirosDelMes}° retiro del mes`,
       nivel: 'warning',
       detalles: { cantidadRetiros: retirosDelMes + 1 }
     })

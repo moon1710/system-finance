@@ -66,54 +66,82 @@ export async function enviarConfirmacionRetiro(email: string, monto: string | nu
  * @param {string} artistaNombre - Nombre completo del artista que realizó el retiro.
  * @param {string | number} monto - Monto del retiro solicitado.
  */
-export async function enviarAlertaAdmin(adminEmail: string, artistaNombre: string, monto: string | number): Promise<void> {
-  const msg = {
-    to: adminEmail,
-    from: process.env.EMAIL_FROM!, // Puedes usar un email diferente si lo configuras en SendGrid y .env
-    subject: `ALERTA: Nueva solicitud de retiro de ${artistaNombre}`,
-    html: `
+// Cambia la firma de la función para aceptar un array de strings
+export async function enviarAlertaAdmin(adminEmails: string[], artistaNombre: string, monto: string | number): Promise<void> {
+  const msg = {
+    // Pasa el array directamente aquí
+    to: adminEmails, 
+    from: process.env.EMAIL_FROM!,
+    subject: `ALERTA: Nueva solicitud de retiro de ${artistaNombre}`,
+    html: `
       <p>Estimado administrador,</p>
       <p>Se ha registrado una nueva solicitud de retiro que requiere su atención:</p>
       <ul>
         <li><strong>Artista:</strong> ${artistaNombre}</li>
-        <li><strong>Monto solicitado:</strong> $${monto.toLocaleString()} USD</li>
+        <li><strong>Monto solicitado:</strong> $${typeof monto === 'number' ? monto.toLocaleString() : monto} USD</li>
       </ul>
       <p>Por favor, ingrese al panel de administración para revisar los detalles.</p>
       <p>Saludos,</p>
       <p>El sistema de alertas de Tu Plataforma</p>
     `,
-  };
-  try {
-    await sgMail.send(msg);
-    console.log(`Alerta a admin enviada a: ${adminEmail} sobre retiro de ${artistaNombre} por $${monto}`);
-  } catch (error: any) {
-    console.error(`Error al enviar alerta a admin ${adminEmail}:`, error.response?.body || error);
-    throw new Error(`Fallo al enviar alerta a administrador.`);
-  }
+  };
+  try {
+    await sgMail.send(msg);
+    // Actualiza el log para que muestre el array
+    console.log(`Alerta a admin enviada a: ${adminEmails.join(', ')} sobre retiro de ${artistaNombre}`);
+  } catch (error: any) {
+    console.error(`Error al enviar alerta a admin ${adminEmails.join(', ')}:`, error.response?.body || error);
+    throw new Error(`Fallo al enviar alerta a administrador.`);
+  }
 }
-
 /**
  * Envía un correo electrónico al usuario para notificarle un cambio en el estado de su retiro.
  * @param {string} email - Correo electrónico del usuario.
  * @param {'Pendiente' | 'Procesando' | 'Completado' | 'Rechazado'} estado - Nuevo estado del retiro.
  * @param {string} [motivo] - Motivo adicional, útil para retiros rechazados.
  */
-export async function enviarActualizacionEstado(email: string, estado: 'Pendiente' | 'Procesando' | 'Completado' | 'Rechazado', motivo?: string): Promise<void> {
-  let subject = `Actualización de estado de tu retiro: ${estado}`;
-  let body = `
-    <p>Hola,</p>
-    <p>Te informamos que el estado de tu solicitud de retiro ha sido actualizado a: <strong>${estado}</strong>.</p>
-  `;
+export async function enviarActualizacionEstado(
+  email: string,
+  estado: 'Aprobado' | 'Completado' | 'Rechazado',
+  nombreCompleto: string,
+  monto: number,
+  motivo?: string
+): Promise<void> {
+  let subject = '';
+  let body = '';
+  const montoFormateado = monto.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 
-  if (estado === 'Rechazado' && motivo) {
-    subject = 'Tu solicitud de retiro ha sido rechazada';
-    body += `<p><strong>Motivo del rechazo:</strong> ${motivo}</p>`;
-  } else if (estado === 'Completado') {
-    body += `<p>¡Tu retiro ha sido procesado con éxito! Por favor, verifica tu cuenta bancaria.</p>`;
+  // Construir el cuerpo y asunto del correo dinámicamente
+  switch (estado) {
+    case 'Aprobado':
+      subject = `Tu retiro de ${montoFormateado} ha sido aprobado`;
+      body = `
+        <p>Hola, ${nombreCompleto},</p>
+        <p>Buenas noticias. Tu solicitud de retiro por <strong>${montoFormateado}</strong> ha sido aprobada y está siendo procesada.</p>
+        <p>Recibirás otra notificación una vez que el pago haya sido completado. Generalmente, esto toma de 3 a 5 días hábiles.</p>
+      `;
+      break;
+    case 'Completado':
+      subject = `¡Tu retiro de ${montoFormateado} ha sido enviado!`;
+      body = `
+        <p>Hola, ${nombreCompleto},</p>
+        <p>¡Excelente! Hemos enviado el pago de tu retiro por <strong>${montoFormateado}</strong> a tu cuenta registrada.</p>
+        <p>Por favor, verifica tu cuenta bancaria. El tiempo que tarda en reflejarse depende de tu banco.</p>
+      `;
+      break;
+    case 'Rechazado':
+      subject = `Tu solicitud de retiro de ${montoFormateado} fue rechazada`;
+      body = `
+        <p>Hola, ${nombreCompleto},</p>
+        <p>Lamentamos informarte que tu solicitud de retiro por <strong>${montoFormateado}</strong> no pudo ser procesada.</p>
+        <p><strong>Motivo del rechazo:</strong> ${motivo || 'No se proporcionó un motivo específico.'}</p>
+        <p>Si tienes alguna pregunta, por favor, contacta a soporte.</p>
+      `;
+      break;
   }
 
   body += `
-    <p>Para más detalles, por favor, inicia sesión en tu cuenta.</p>
+    <p>Gracias por usar nuestra plataforma.</p>
     <p>Saludos,</p>
     <p>El equipo de Tu Plataforma</p>
   `;
@@ -127,7 +155,7 @@ export async function enviarActualizacionEstado(email: string, estado: 'Pendient
 
   try {
     await sgMail.send(msg);
-    console.log(`Email de actualización de estado enviado a: ${email} - Estado: ${estado}`);
+    console.log(`Email de actualización de estado ('${estado}') enviado a: ${email}`);
   } catch (error: any) {
     console.error(`Error al enviar actualización de estado a ${email}:`, error.response?.body || error);
     throw new Error(`Fallo al enviar actualización de estado.`);

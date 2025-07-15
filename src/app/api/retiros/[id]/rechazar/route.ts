@@ -71,25 +71,31 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    // --- Lógica de Email Mejorada ---
     try {
       const retiroRechazado = resultado.data;
-      if (retiroRechazado && retiroRechazado.usuarioId) {
-        const artista = await prisma.usuario.findUnique({
-          where: { id: retiroRechazado.usuarioId },
-          select: { email: true }
-        });
 
-        if (artista && artista.email) {
-          await enviarActualizacionEstado(artista.email, 'Rechazado', body.motivo);
-          console.log(`[EMAIL] Notificación de estado (Rechazado) enviada a artista: ${artista.email} para retiro ${id}`);
-        } else {
-          console.warn(`[EMAIL WARN] No se encontró email para el usuario del retiro ${id} al rechazar.`);
-        }
+      // Obtener todos los datos necesarios del artista
+      const artista = await prisma.usuario.findUnique({
+        where: { id: retiroRechazado.usuarioId },
+        select: { email: true, nombreCompleto: true }
+      });
+
+      if (artista?.email && artista.nombreCompleto) {
+        // Llamar a la función con todos los parámetros, incluyendo el motivo
+        await enviarActualizacionEstado(
+          artista.email,
+          'Rechazado',
+          artista.nombreCompleto,
+          retiroRechazado.monto,
+          body.motivo
+        );
+        console.log(`[EMAIL] Notificación de rechazo enviada a artista: ${artista.email}`);
       } else {
-        console.warn(`[EMAIL WARN] Datos de retiro incompletos para enviar notificación de rechazo para retiro ${id}.`);
+        console.warn(`[EMAIL WARN] Datos de artista incompletos para retiro ${id}.`);
       }
     } catch (emailError) {
-      console.error(`[EMAIL ERROR] Fallo al enviar email de actualización de estado para rechazo de retiro ${id}:`, emailError);
+      console.error(`[EMAIL ERROR] Fallo al enviar email de rechazo para retiro ${id}:`, emailError);
     }
 
     return NextResponse.json({
