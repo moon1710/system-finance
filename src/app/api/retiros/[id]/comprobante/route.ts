@@ -8,6 +8,7 @@ import { existsSync } from 'fs'
 import path from 'path'
 import { PrismaClient } from '@prisma/client'
 import { enviarActualizacionEstado } from '@/lib/email/emailService'
+import { renderTemplate } from '@/lib/email/templateEngine'
 
 const prisma = new PrismaClient()
 
@@ -95,6 +96,19 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         
         // Convertir Decimal a number para el email
         const montoNumerico = Number(retiroActualizado.montoSolicitado)
+
+        // 🔥 AQUÍ ES DONDE AGREGAS EL DEBUG DEL TEMPLATE:
+        // ------- AGREGA ESTO JUSTO AQUÍ -------
+        const testHtml = renderTemplate('retiro-completado', {
+          solicitudId: id,
+          nombreArtista: usuario.nombreCompleto,
+          monto: montoNumerico.toLocaleString(),
+          fechaCompletado: new Date().toLocaleDateString('es-ES')
+        })
+
+        console.log('🧪 ¿Variables sin reemplazar?', testHtml.includes('{{'))
+        console.log('📄 HTML preview:', testHtml.substring(0, 200))
+        // ------- FIN DE LO QUE AGREGAS -------
         
         await enviarActualizacionEstado(
           usuario.email,

@@ -7,9 +7,10 @@ import {
   crearSolicitudRetiro,
   obtenerRetirosUsuario,
 } from "@/lib/services/retiros";
-import {
+import { 
   enviarConfirmacionRetiro,
-  enviarAlertaAdmin,
+  enviarAlertaAdmin, // Esta función SÍ existe aquí
+  enviarActualizacionEstado 
 } from "@/lib/email/emailService";
 import { prisma } from "@/lib/db"; // Necesario para obtener datos del artista y de los administradores
 

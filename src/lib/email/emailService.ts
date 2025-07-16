@@ -1,7 +1,197 @@
-// src/lib/emailService.ts (Actualizado con nuevos templates)
+// src/lib/email/emailService.ts (Completo con todas las funciones)
 
 import sgMail from '../sendgrid';
-import { renderTemplate } from './templateEngine';
+import { renderTemplate, debugTemplate } from './templateEngine';
+
+/**
+ * Envía un correo electrónico de confirmación de retiro a un artista.
+ */
+export async function enviarConfirmacionRetiro(email: string, monto: string | number): Promise<void> {
+  const html = renderTemplate('confirmacion-retiro', { 
+    monto: typeof monto === 'number' ? monto.toLocaleString() : monto 
+  });
+  
+  const msg = {
+    to: email,
+    from: process.env.EMAIL_FROM!,
+    subject: 'Confirmación de solicitud de retiro',
+    html: html,
+  };
+
+  try {
+    await sgMail.send(msg);
+    console.log(`✅ [EMAIL] Confirmación de retiro enviada a: ${email}`);
+  } catch (error: any) {
+    console.error(`❌ [EMAIL ERROR] Confirmación retiro a ${email}:`, error.response?.body || error);
+    throw new Error(`Fallo al enviar confirmación de retiro.`);
+  }
+}
+
+/**
+ * Envía una alerta por correo electrónico a los administradores sobre un retiro.
+ */
+export async function enviarAlertaAdmin(adminEmails: string[], artistaNombre: string, monto: string | number): Promise<void> {
+  const html = renderTemplate('alerta-admin', { 
+    artistaNombre, 
+    monto: typeof monto === 'number' ? monto.toLocaleString() : monto 
+  });
+  
+  const msg = {
+    to: adminEmails,
+    from: process.env.EMAIL_FROM!,
+    subject: `ALERTA: Nueva solicitud de retiro de ${artistaNombre}`,
+    html: html,
+  };
+
+  try {
+    await sgMail.send(msg);
+    console.log(`✅ [EMAIL] Alerta admin enviada a: ${adminEmails.join(', ')}`);
+  } catch (error: any) {
+    console.error(`❌ [EMAIL ERROR] Alerta admin ${adminEmails.join(', ')}:`, error.response?.body || error);
+    throw new Error(`Fallo al enviar alerta a administrador.`);
+  }
+}
+
+/**
+ * Función mejorada para actualización de estado con debugging
+ */
+export async function enviarActualizacionEstado(
+  email: string,
+  estado: 'Aprobado' | 'Completado' | 'Rechazado',
+  nombreCompleto: string,
+  monto: number,
+  motivo?: string
+): Promise<void> {
+  
+  console.log('🔍 [EMAIL DEBUG] Iniciando envío de actualización de estado...')
+  console.log('📧 Email:', email)
+  console.log('📊 Estado:', estado)
+  console.log('👤 Nombre:', nombreCompleto)
+  console.log('💰 Monto:', monto)
+
+  if (estado === 'Completado') {
+    // Usar template específico para retiros completados
+    const templateData = {
+      solicitudId: `RET-${Date.now()}`, // Genera un ID temporal si no tienes uno
+      nombreArtista: nombreCompleto,
+      monto: monto.toLocaleString(),
+      fechaCompletado: new Date().toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      }),
+      metodoPago: 'Transferencia bancaria',
+      urlComprobante: `${process.env.NEXT_PUBLIC_BASE_URL}/api/retiros/comprobante`, // URL temporal
+      urlPanelArtista: `${process.env.NEXT_PUBLIC_BASE_URL}/artista/retiros`
+    }
+
+    // 🔍 DEBUG: Mostrar datos antes de renderizar
+    console.log('🔍 [TEMPLATE DEBUG] Datos que se enviarán al template:')
+    debugTemplate('retiro-completado', templateData)
+
+    const html = renderTemplate('retiro-completado', templateData)
+    
+    // 🔍 DEBUG: Mostrar parte del HTML generado
+    console.log('📄 [HTML DEBUG] Primeros 200 caracteres del HTML:')
+    console.log(html.substring(0, 200) + '...')
+
+    const msg = {
+      to: email,
+      from: process.env.EMAIL_FROM!,
+      subject: `Tu retiro de $${monto.toLocaleString()} ya está completado`,
+      html: html,
+    }
+
+    try {
+      await sgMail.send(msg)
+      console.log(`✅ [EMAIL SUCCESS] Retiro completado enviado a: ${email}`)
+    } catch (error: any) {
+      console.error(`❌ [EMAIL ERROR] Retiro completado a ${email}:`, error.response?.body || error)
+      throw new Error(`Fallo al enviar actualización de estado.`)
+    }
+
+  } else {
+    // Para otros estados, usar template genérico
+    const templateData = {
+      nombreCompleto,
+      estado,
+      montoFormateado: monto.toLocaleString('en-US', { style: 'currency', currency: 'USD' }),
+      motivo: motivo || ''
+    }
+
+    console.log('🔍 [TEMPLATE DEBUG] Datos para template genérico:')
+    debugTemplate('cambio-estado', templateData)
+
+    const html = renderTemplate('cambio-estado', templateData)
+
+    const msg = {
+      to: email,
+      from: process.env.EMAIL_FROM!,
+      subject: `Actualización de tu retiro`,
+      html: html,
+    }
+
+    try {
+      await sgMail.send(msg)
+      console.log(`✅ [EMAIL SUCCESS] Actualización '${estado}' enviada a: ${email}`)
+    } catch (error: any) {
+      console.error(`❌ [EMAIL ERROR] Actualización estado a ${email}:`, error.response?.body || error)
+      throw new Error(`Fallo al enviar actualización de estado.`)
+    }
+  }
+}
+
+/**
+ * Nueva función específica para retiros completados (con debugging)
+ */
+export async function enviarRetiroCompletado(
+  email: string,
+  solicitudId: string,
+  nombreArtista: string,
+  monto: number
+): Promise<void> {
+  
+  const templateData = {
+    solicitudId: solicitudId,
+    nombreArtista: nombreArtista,
+    monto: monto.toLocaleString(),
+    fechaCompletado: new Date().toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'long', 
+      day: 'numeric'
+    }),
+    metodoPago: 'Transferencia bancaria',
+    urlComprobante: `${process.env.NEXT_PUBLIC_BASE_URL}/api/retiros/${solicitudId}/comprobante`,
+    urlPanelArtista: `${process.env.NEXT_PUBLIC_BASE_URL}/artista/retiros`
+  }
+
+  console.log('🎯 [RETIRO COMPLETADO] Enviando email específico...')
+  debugTemplate('retiro-completado', templateData)
+
+  const html = renderTemplate('retiro-completado', templateData)
+  
+  // Verificar que las variables se reemplazaron
+  if (html.includes('{{')) {
+    console.warn('⚠️ [TEMPLATE WARNING] Algunas variables no se reemplazaron en el HTML:')
+    const unreplacedVars = html.match(/\{\{[^}]+\}\}/g)
+    console.log('Variables sin reemplazar:', unreplacedVars)
+  }
+
+  const msg = {
+    to: email,
+    from: process.env.EMAIL_FROM!,
+    subject: `Tu retiro #${solicitudId} ya está completado`,
+    html: html,
+  }
+
+  try {
+    await sgMail.send(msg)
+    console.log(`✅ [EMAIL SUCCESS] Retiro completado enviado a: ${email}`)
+  } catch (error: any) {
+    console.error(`❌ [EMAIL ERROR] Retiro completado a ${email}:`, error.response?.body || error)
+    throw new Error(`Fallo al enviar notificación de retiro completado.`)
+  }
+}
 
 /**
  * Envía un correo electrónico de bienvenida a un nuevo usuario.
@@ -26,206 +216,7 @@ export async function enviarEmailBienvenida(email: string, password: string): Pr
 }
 
 /**
- * Envía confirmación de solicitud de retiro al artista (versión detallada)
- */
-export async function enviarConfirmacionRetiro(
-  email: string, 
-  data: {
-    solicitudId: string;
-    nombreArtista: string;
-    monto: string | number;
-    nombreBanco: string;
-    tipoCuenta: string;
-    ultimosDigitos: string;
-    fecha: string;
-    urlPanelArtista: string;
-  }
-): Promise<void> {
-  const html = renderTemplate('confirmacion-retiro', {
-    ...data,
-    monto: typeof data.monto === 'number' ? data.monto.toLocaleString() : data.monto
-  });
-  
-  const msg = {
-    to: email,
-    from: process.env.EMAIL_FROM!,
-    subject: `Confirmación de tu solicitud de retiro #${data.solicitudId}`,
-    html: html,
-  };
-
-  try {
-    await sgMail.send(msg);
-    console.log(`✅ [EMAIL] Confirmación de retiro enviada a: ${email} (ID: ${data.solicitudId})`);
-  } catch (error: any) {
-    console.error(`❌ [EMAIL ERROR] Confirmación retiro a ${email}:`, error.response?.body || error);
-    throw new Error(`Fallo al enviar confirmación de retiro.`);
-  }
-}
-
-/**
- * Envía alerta a administradores sobre nueva solicitud de retiro
- */
-export async function enviarAlertaAdmin(
-  adminEmails: string[], 
-  data: {
-    solicitudId: string;
-    nombreAdmin: string;
-    nombreArtista: string;
-    monto: string | number;
-    nombreBanco: string;
-    tipoCuenta: string;
-    ultimosDigitos: string;
-    fecha: string;
-    criterioAlerta: string;
-    urlPanelAdmin: string;
-  }
-): Promise<void> {
-  const html = renderTemplate('alerta-admin', {
-    ...data,
-    monto: typeof data.monto === 'number' ? data.monto.toLocaleString() : data.monto
-  });
-  
-  const msg = {
-    to: adminEmails,
-    from: process.env.EMAIL_FROM!,
-    subject: `[ALERTA] Nueva solicitud de retiro requiere revisión`,
-    html: html,
-  };
-
-  try {
-    await sgMail.send(msg);
-    console.log(`✅ [EMAIL] Alerta admin enviada a: ${adminEmails.join(', ')} (ID: ${data.solicitudId})`);
-  } catch (error: any) {
-    console.error(`❌ [EMAIL ERROR] Alerta admin ${adminEmails.join(', ')}:`, error.response?.body || error);
-    throw new Error(`Fallo al enviar alerta a administrador.`);
-  }
-}
-
-/**
- * Envía notificación de retiro completado
- */
-export async function enviarRetiroCompletado(
-  email: string,
-  data: {
-    solicitudId: string;
-    nombreArtista: string;
-    monto: number;
-    fechaCompletado: string;
-    metodoPago: string;
-    urlComprobante: string;
-    urlPanelArtista: string;
-  }
-): Promise<void> {
-  const html = renderTemplate('retiro-completado', {
-    ...data,
-    monto: data.monto.toLocaleString()
-  });
-  
-  const msg = {
-    to: email,
-    from: process.env.EMAIL_FROM!,
-    subject: `Tu retiro #${data.solicitudId} ya está completado`,
-    html: html,
-  };
-
-  try {
-    await sgMail.send(msg);
-    console.log(`✅ [EMAIL] Retiro completado enviado a: ${email} (ID: ${data.solicitudId})`);
-  } catch (error: any) {
-    console.error(`❌ [EMAIL ERROR] Retiro completado a ${email}:`, error.response?.body || error);
-    throw new Error(`Fallo al enviar notificación de retiro completado.`);
-  }
-}
-
-/**
- * Función legacy para actualización de estado (mantiene compatibilidad)
- */
-export async function enviarActualizacionEstado(
-  email: string,
-  estado: 'Aprobado' | 'Completado' | 'Rechazado',
-  nombreCompleto: string,
-  monto: number,
-  motivo?: string
-): Promise<void> {
-  let template = '';
-  let subject = '';
-  let templateData: any = {};
-
-  const montoFormateado = monto.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
-
-  switch (estado) {
-    case 'Completado':
-      // Usar el nuevo template detallado si es completado
-      template = 'retiro-completado';
-      subject = `Tu retiro ${montoFormateado} ya está completado`;
-      templateData = {
-        solicitudId: 'N/A', // Sería mejor pasar el ID real
-        nombreArtista: nombreCompleto,
-        monto: monto.toLocaleString(),
-        fechaCompletado: new Date().toLocaleDateString('es-ES'),
-        metodoPago: 'Transferencia bancaria',
-        urlComprobante: '#', // URL real del comprobante
-        urlPanelArtista: `${process.env.NEXT_PUBLIC_BASE_URL}/artista/retiros`
-      };
-      break;
-    
-    default:
-      // Para otros estados, usar template genérico
-      template = 'cambio-estado';
-      subject = `Actualización de tu retiro ${montoFormateado}`;
-      templateData = {
-        nombreCompleto,
-        estado,
-        montoFormateado,
-        motivo
-      };
-      break;
-  }
-
-  const html = renderTemplate(template, templateData);
-  
-  const msg = {
-    to: email,
-    from: process.env.EMAIL_FROM!,
-    subject: subject,
-    html: html,
-  };
-
-  try {
-    await sgMail.send(msg);
-    console.log(`✅ [EMAIL] Actualización de estado '${estado}' enviada a: ${email}`);
-  } catch (error: any) {
-    console.error(`❌ [EMAIL ERROR] Actualización estado a ${email}:`, error.response?.body || error);
-    throw new Error(`Fallo al enviar actualización de estado.`);
-  }
-}
-
-/**
- * Envía confirmación de cambio de contraseña
- */
-export async function enviarConfirmacionCambioPassword(email: string): Promise<void> {
-  const html = renderTemplate('cambio-estado', { 
-    mensaje: 'Tu contraseña ha sido cambiada exitosamente.' 
-  });
-  
-  const msg = {
-    to: email,
-    from: process.env.EMAIL_FROM!,
-    subject: 'Confirmación de cambio de contraseña',
-    html: html,
-  };
-
-  try {
-    await sgMail.send(msg);
-    console.log(`✅ [EMAIL] Confirmación cambio password enviada a: ${email}`);
-  } catch (error: any) {
-    console.error(`❌ [EMAIL ERROR] Cambio password a ${email}:`, error.response?.body || error);
-    throw new Error(`Fallo al enviar confirmación de cambio de contraseña.`);
-  }
-}
-
-/**
- * Envía token de recuperación de contraseña
+ * Envía un correo electrónico con un token de recuperación de contraseña.
  */
 export async function enviarTokenRecuperacion(email: string, token: string): Promise<void> {
   const recoveryLink = `${process.env.NEXT_PUBLIC_BASE_URL}/reset-password?token=${token}`;
@@ -246,4 +237,22 @@ export async function enviarTokenRecuperacion(email: string, token: string): Pro
     console.error(`❌ [EMAIL ERROR] Token recuperación a ${email}:`, error.response?.body || error);
     throw new Error(`Fallo al enviar token de recuperación.`);
   }
+}
+
+/**
+ * Función de test para verificar templates
+ */
+export async function testTemplate(templateName: string, sampleData: Record<string, any>): Promise<string> {
+  console.log(`🧪 [TEST] Probando template: ${templateName}`)
+  debugTemplate(templateName, sampleData)
+  
+  const html = renderTemplate(templateName, sampleData)
+  
+  if (html.includes('{{')) {
+    console.warn('⚠️ Variables sin reemplazar encontradas')
+  } else {
+    console.log('✅ Template renderizado correctamente')
+  }
+  
+  return html
 }
