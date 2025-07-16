@@ -30,11 +30,60 @@ export async function enviarConfirmacionRetiro(email: string, monto: string | nu
 /**
  * Envía una alerta por correo electrónico a los administradores sobre un retiro.
  */
+export async function enviarAlertaAdminCompleta(adminEmails: string[], data: any): Promise<void> {
+  console.log('🔍 [ALERTA ADMIN] Datos originales recibidos:', data);
+  
+  // Preparar datos de forma segura
+  const templateData = prepararDatosEmail(data);
+  
+  console.log('🔍 [ALERTA ADMIN] Datos preparados para template:', templateData);
+  console.log('🔍 [TEMPLATE DEBUG] Datos para template alerta-admin:');
+  debugTemplate('alerta-admin', templateData);
+  
+  const html = renderTemplate('alerta-admin', templateData);
+  
+  // Verificar que las variables se reemplazaron
+  if (html.includes('{{')) {
+    console.warn('⚠️ [TEMPLATE WARNING] Variables sin reemplazar en alerta-admin:');
+    const unreplacedVars = html.match(/\{\{[^}]+\}\}/g);
+    console.log('Variables sin reemplazar:', unreplacedVars);
+  }
+  
+  const msg = {
+    to: adminEmails,
+    from: process.env.EMAIL_FROM!,
+    subject: `[ALERTA] Nueva solicitud de retiro #${templateData.solicitudId} requiere revisión`,
+    html: html,
+  };
+
+  try {
+    await sgMail.send(msg);
+    console.log(`✅ [EMAIL] Alerta admin completa enviada a: ${adminEmails.join(', ')}`);
+  } catch (error: any) {
+    console.error(`❌ [EMAIL ERROR] Alerta admin completa ${adminEmails.join(', ')}:`, error.response?.body || error);
+    throw new Error(`Fallo al enviar alerta a administrador.`);
+  }
+}
+
+
+/**
+ * Función legacy de alerta admin (solo para compatibilidad)
+ */
 export async function enviarAlertaAdmin(adminEmails: string[], artistaNombre: string, monto: string | number): Promise<void> {
-  const html = renderTemplate('alerta-admin', { 
-    artistaNombre, 
-    monto: typeof monto === 'number' ? monto.toLocaleString() : monto 
-  });
+  const templateData = {
+    solicitudId: `RET-${Date.now()}`,
+    nombreAdmin: 'Administrador',
+    nombreArtista: artistaNombre,
+    monto: typeof monto === 'number' ? monto.toLocaleString() : monto,
+    nombreBanco: 'Pendiente',
+    tipoCuenta: 'Pendiente',
+    ultimosDigitos: '****',
+    fecha: new Date().toLocaleDateString('es-ES'),
+    criterioAlerta: 'Solicitud de retiro estándar',
+    urlPanelAdmin: `${process.env.NEXT_PUBLIC_BASE_URL}/admin/retiros`
+  };
+  
+  const html = renderTemplate('alerta-admin', templateData);
   
   const msg = {
     to: adminEmails,
@@ -45,9 +94,9 @@ export async function enviarAlertaAdmin(adminEmails: string[], artistaNombre: st
 
   try {
     await sgMail.send(msg);
-    console.log(`✅ [EMAIL] Alerta admin enviada a: ${adminEmails.join(', ')}`);
+    console.log(`✅ [EMAIL] Alerta admin (legacy) enviada a: ${adminEmails.join(', ')}`);
   } catch (error: any) {
-    console.error(`❌ [EMAIL ERROR] Alerta admin ${adminEmails.join(', ')}:`, error.response?.body || error);
+    console.error(`❌ [EMAIL ERROR] Alerta admin legacy ${adminEmails.join(', ')}:`, error.response?.body || error);
     throw new Error(`Fallo al enviar alerta a administrador.`);
   }
 }
@@ -194,6 +243,26 @@ export async function enviarRetiroCompletado(
 }
 
 /**
+ * Función helper para preparar datos de email de forma segura
+ */
+function prepararDatosEmail(data: any): any {
+  return {
+    solicitudId: data.solicitudId || `RET-${Date.now()}`,
+    nombreArtista: data.nombreArtista || 'Artista',
+    monto: (typeof data.monto === 'number' ? data.monto.toLocaleString() : data.monto) || '0',
+    nombreBanco: data.nombreBanco || 'Banco no especificado',
+    tipoCuenta: data.tipoCuenta || 'Cuenta no especificada',
+    ultimosDigitos: data.ultimosDigitos || '****',
+    fecha: data.fecha || new Date().toLocaleDateString('es-ES'),
+    urlPanelArtista: data.urlPanelArtista || `${process.env.NEXT_PUBLIC_BASE_URL}/artista/retiros`,
+    // Para alertas de admin
+    nombreAdmin: data.nombreAdmin || 'Administrador',
+    criterioAlerta: data.criterioAlerta || 'Solicitud de retiro estándar',
+    urlPanelAdmin: data.urlPanelAdmin || `${process.env.NEXT_PUBLIC_BASE_URL}/admin/retiros`
+  };
+}
+
+/**
  * Envía un correo electrónico de bienvenida a un nuevo usuario.
  */
 export async function enviarEmailBienvenida(email: string, password: string): Promise<void> {
@@ -237,6 +306,18 @@ export async function enviarTokenRecuperacion(email: string, token: string): Pro
     console.error(`❌ [EMAIL ERROR] Token recuperación a ${email}:`, error.response?.body || error);
     throw new Error(`Fallo al enviar token de recuperación.`);
   }
+}
+
+export function debugearDatosEmail(titulo: string, data: any): void {
+  console.log(`🔍 [${titulo}] Debugging datos de email:`);
+  console.log('  - solicitudId:', data.solicitudId);
+  console.log('  - nombreArtista:', data.nombreArtista);
+  console.log('  - monto:', data.monto, typeof data.monto);
+  console.log('  - nombreBanco:', data.nombreBanco);
+  console.log('  - tipoCuenta:', data.tipoCuenta);
+  console.log('  - ultimosDigitos:', data.ultimosDigitos);
+  console.log('  - fecha:', data.fecha);
+  console.log('  - Datos completos:', JSON.stringify(data, null, 2));
 }
 
 /**

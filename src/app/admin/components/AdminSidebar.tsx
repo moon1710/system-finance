@@ -6,8 +6,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
     Home,
-    CreditCard,
-    Download,
+    UsersRound,
+    HandCoins,
     Settings,
     LogOut,
     Menu,
@@ -38,8 +38,8 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
 
     const menuItems = [
         { href: "/admin", icon: Home, label: "Dashboard" },
-        { href: "/admin/artistas", icon: CreditCard, label: "Mis Cuentas" },
-        { href: "/admin/retiros", icon: Download, label: "Retiros" },
+        { href: "/admin/artistas", icon: UsersRound, label: "Artistas" },
+        { href: "/admin/retiros", icon: HandCoins, label: "Retiros" },
         { href: "/admin/configuracion", icon: Settings, label: "Configuracion" },
     ];
 

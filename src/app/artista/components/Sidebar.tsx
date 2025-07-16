@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Home,
-  CreditCard,
+  HandCoins,
   Download,
   Settings,
   LogOut,
@@ -15,7 +15,6 @@ import {
   User,
   ChevronDown,
   Bell,
-  Sparkles,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -39,7 +38,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
 
   const menuItems = [
     { href: "/artista", icon: Home, label: "Dashboard" },
-    { href: "/artista/cuentas", icon: CreditCard, label: "Mis Cuentas" },
+    { href: "/artista/cuentas", icon: HandCoins, label: "Mis Cuentas" },
     { href: "/artista/retiros", icon: Download, label: "Retiros" },
     { href: "/artista/configuracion", icon: Settings, label: "Configuración" },
   ];

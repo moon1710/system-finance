@@ -18,45 +18,66 @@
         .button { display: inline-block; background: #dc3545; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; margin: 15px 0; }
         .priority { background: #f8d7da; color: #721c24; padding: 15px; border-radius: 5px; text-align: center; font-weight: bold; margin: 15px 0; }
         .criteria { background: #fff3cd; color: #856404; padding: 10px; border-radius: 5px; margin: 10px 0; }
+        .account-info { background: #e7f3ff; padding: 15px; border-radius: 5px; margin: 15px 0; }
+        .account-type { display: inline-block; background: #007bff; color: white; padding: 3px 8px; border-radius: 3px; font-size: 0.8em; margin-left: 10px; }
     </style>
 </head>
 <body>
     <div class="header">
         <div class="alert-icon">⚠️</div>
         <h1>ALERTA - Nueva Solicitud de Retiro</h1>
-        <p>Requiere Revisión Inmediata</p>
+        <p>ID: <strong>#{{solicitudId}}</strong></p>
     </div>
 
     <div class="content">
         <p>Hola <strong>{{nombreAdmin}}</strong>,</p>
         
         <div class="priority">
-            🚨 SOLICITUD DE ALTA PRIORIDAD 🚨
+            🚨 SOLICITUD REQUIERE REVISIÓN 🚨
         </div>
 
-        <p>El artista <strong>{{nombreArtista}}</strong> ha generado una nueva solicitud de retiro que cumple criterios de alerta y requiere tu revisión inmediata:</p>
+        <p>El artista <strong>{{nombreArtista}}</strong> ha generado una nueva solicitud de retiro:</p>
 
         <div class="details">
             <ul>
                 <li><strong>ID de solicitud:</strong> {{solicitudId}}</li>
                 <li><strong>Artista:</strong> {{nombreArtista}}</li>
                 <li><strong>Monto:</strong> ${{monto}} USD</li>
-                <li><strong>Cuenta destino:</strong> {{nombreBanco}} – {{tipoCuenta}} ({{ultimosDigitos}})</li>
-                <li><strong>Fecha de envío:</strong> {{fecha}}</li>
+                <li><strong>Fecha de solicitud:</strong> {{fecha}}</li>
             </ul>
         </div>
 
-        <div class="criteria">
-            <strong>Criterio de alerta:</strong> {{criterioAlerta}}
+        <div class="account-info">
+            <h4>💳 Cuenta de destino:</h4>
+            <p>
+                <strong>{{nombreBanco}}</strong>
+                <span class="account-type">{{tipoCuenta}}</span>
+            </p>
+            <p><strong>Identificador:</strong> {{identificadorCuenta}}</p>
+            <p><strong>Últimos dígitos:</strong> {{ultimosDigitos}}</p>
         </div>
 
-        <p>Accede al panel de administración para validar, aprobar o rechazar esta solicitud y, en caso de aprobación, subir el comprobante correspondiente:</p>
+        <div class="criteria">
+            <strong>📋 Criterio de alerta:</strong><br>
+            {{criterioAlerta}}
+        </div>
+
+        <div style="background: #d1ecf1; padding: 15px; border-radius: 5px; margin: 15px 0;">
+            <p><strong>🔍 Acciones disponibles:</strong></p>
+            <ul style="margin: 10px 0;">
+                <li>• <strong>Aprobar</strong> - Cambiar estado a "Procesando"</li>
+                <li>• <strong>Rechazar</strong> - Denegar la solicitud con motivo</li>
+                <li>• <strong>Completar</strong> - Subir comprobante y marcar como completado</li>
+            </ul>
+        </div>
+
+        <p>Accede al panel de administración para tomar acción sobre esta solicitud:</p>
         
         <div style="text-align: center;">
             <a href="{{urlPanelAdmin}}" class="button">🔍 Revisar Solicitud</a>
         </div>
 
-        <p><strong>Gracias por atenderla con la prioridad necesaria.</strong></p>
+        <p><strong>Gracias por atender esta solicitud con prontitud.</strong></p>
     </div>
 
     <div class="footer">

@@ -9,7 +9,7 @@ import {
 } from "@/lib/services/retiros";
 import { 
   enviarConfirmacionRetiro,
-  enviarAlertaAdmin, // Esta función SÍ existe aquí
+  enviarAlertaAdminCompleta, // Nueva función
   enviarActualizacionEstado 
 } from "@/lib/email/emailService";
 import { prisma } from "@/lib/db"; // Necesario para obtener datos del artista y de los administradores
@@ -120,56 +120,129 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // --- Lógica de envío de emails ---
-    try {
-      // 1. Obtener los datos del artista para el email
-      const artista = await prisma.usuario.findUnique({
-        where: { id: session.userId },
-        select: { email: true, nombreCompleto: true },
-      });
+try {
+  console.log('🔍 [EMAIL DEBUG] Iniciando envío de emails...');
 
-      if (artista) {
-        // Enviar confirmación al artista
-        await enviarConfirmacionRetiro(artista.email, monto);
-        console.log(
-          `[EMAIL] Confirmación de retiro enviada a artista: ${artista.email}`
-        );
+  // 1. Obtener los datos completos del artista
+  const artista = await prisma.usuario.findUnique({
+    where: { id: session.userId },
+    select: { email: true, nombreCompleto: true },
+  });
 
-        // 2. Obtener los emails de TODOS los administradores de la base de datos
-        const admins = await prisma.usuario.findMany({
-          where: { rol: "admin" },
-          select: { email: true },
-        });
-
-        const adminEmails = admins.map((admin) => admin.email); // Esto ya es un array: ['a@a.com', 'b@b.com']
-
-        if (adminEmails && adminEmails.length > 0) {
-          console.log('Enviando alerta con los siguientes datos:');
-          console.log('Emails Admin:', adminEmails);
-          console.log('Nombre Artista:', artista.nombreCompleto);
-          console.log('Monto:', monto);
-          // Enviar alerta a administradores pasando el array
-          await enviarAlertaAdmin(adminEmails, artista.nombreCompleto!, monto); // Usar '!' si estás seguro que nombreCompleto existe
-          console.log(
-            `[EMAIL] Alerta de retiro enviada a administradores: ${adminEmails.join(", ")}`
-          );
-        } else {
-          console.warn(
-            `[EMAIL WARN] No se encontraron administradores para enviar alertas.`
-          );
-        }
-      } else {
-        console.warn(
-          `[EMAIL WARN] No se encontró el artista con ID ${session.userId} para enviar notificaciones de retiro.`
-        );
-      }
-    } catch (emailError) {
-      console.error(
-        `[EMAIL ERROR] Fallo al enviar notificaciones de retiro:`,
-        emailError
-      );
+  // 2. Obtener TODOS los datos de la cuenta bancaria
+  const cuentaBancaria = await prisma.cuentaBancaria.findUnique({
+    where: { id: body.cuentaId },
+    select: {
+      tipoCuenta: true,
+      nombreBanco: true,
+      numeroCuenta: true,
+      clabe: true,
+      emailPaypal: true,
+      nombreTitular: true,
+      numeroRuta: true,
+      swift: true
     }
-    // --- Fin lógica de envío de emails ---
+  });
+
+  console.log('🔍 [EMAIL DEBUG] Cuenta bancaria completa:', cuentaBancaria);
+
+  if (artista && cuentaBancaria) {
+    // 3. Función para obtener los últimos dígitos según el tipo de cuenta
+const obtenerUltimosDigitos = (cuenta: any): string => {
+  switch (cuenta.tipoCuenta?.toLowerCase()) {
+    case 'paypal':
+      return cuenta.email_paypal ? `...${cuenta.email_paypal.slice(-8)}` : '****';  // ← Cambiar aquí
+    
+    case 'nacional':
+      return cuenta.clabe ? cuenta.clabe.slice(-4) : '****';
+    
+    case 'internacional':
+      return cuenta.numeroCuenta ? String(cuenta.numeroCuenta).slice(-4) : '****';
+    
+    default:
+      if (cuenta.numeroCuenta) return String(cuenta.numeroCuenta).slice(-4);
+      if (cuenta.clabe) return cuenta.clabe.slice(-4);
+      if (cuenta.email_paypal) return `...${cuenta.email_paypal.slice(-8)}`;  // ← Cambiar aquí
+      return '****';
+  }
+};
+
+    // 4. Función para obtener el identificador de cuenta
+const obtenerIdentificadorCuenta = (cuenta: any): string => {
+  switch (cuenta.tipoCuenta?.toLowerCase()) {
+    case 'paypal':
+      return cuenta.email_paypal || 'Email no disponible';  // ← Cambiar aquí
+    
+    case 'nacional':
+      return cuenta.clabe || 'CLABE no disponible';
+    
+    case 'internacional':
+      return cuenta.numeroCuenta || 'Número no disponible';
+    
+    default:
+      return 'Cuenta no disponible';
+  }
+};  
+
+    // 5. Preparar datos completos para el email
+    const datosEmail = {
+      solicitudId: resultado.data.id,
+      nombreArtista: artista.nombreCompleto || 'Artista',
+      monto: monto,
+      nombreBanco: cuentaBancaria.nombreBanco || 'Banco no especificado',
+      tipoCuenta: cuentaBancaria.tipoCuenta || 'Cuenta no especificada',
+      ultimosDigitos: obtenerUltimosDigitos(cuentaBancaria),
+      identificadorCuenta: obtenerIdentificadorCuenta(cuentaBancaria),
+      fecha: new Date().toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      }),
+      urlPanelArtista: `${process.env.NEXT_PUBLIC_BASE_URL}/artista/retiros`
+    };
+
+    console.log('🔍 [EMAIL DEBUG] Datos finales para email:', datosEmail);
+
+    // 6. Enviar confirmación
+    await enviarConfirmacionRetiro(artista.email, datosEmail);
+    console.log(`✅ [EMAIL] Confirmación enviada a: ${artista.email}`);
+
+    // 7. Preparar datos para alerta de admin
+    const datosAlertaAdmin = {
+      ...datosEmail,
+      nombreAdmin: 'Administrador',
+      criterioAlerta: resultado.alertas?.length > 0 ? 
+        resultado.alertas.map(a => a.mensaje).join(', ') : 
+        'Solicitud de retiro estándar',
+      urlPanelAdmin: `${process.env.NEXT_PUBLIC_BASE_URL}/admin/retiros`
+    };
+
+    // 8. Obtener emails de administradores
+    const admins = await prisma.usuario.findMany({
+      where: { rol: "admin" },
+      select: { email: true },
+    });
+
+    const adminEmails = admins.map((admin) => admin.email);
+
+    if (adminEmails && adminEmails.length > 0) {
+      await enviarAlertaAdminCompleta(adminEmails, datosAlertaAdmin);
+      console.log(`✅ [EMAIL] Alerta enviada a: ${adminEmails.join(", ")}`);
+    } else {
+      console.warn(`⚠️ [EMAIL WARN] No se encontraron administradores`);
+    }
+
+  } else {
+    console.warn(`⚠️ [EMAIL WARN] Datos faltantes:`, {
+      artista: !!artista,
+      cuentaBancaria: !!cuentaBancaria
+    });
+  }
+} catch (emailError) {
+  console.error(`❌ [EMAIL ERROR] Error completo:`, emailError);
+  console.error(`❌ [EMAIL ERROR] Stack:`, emailError.stack);
+}
+// --- Fin lógica de envío de emails ---
 
     return NextResponse.json(
       {
