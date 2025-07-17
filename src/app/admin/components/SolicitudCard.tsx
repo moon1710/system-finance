@@ -43,7 +43,7 @@ interface Solicitud {
     id: string
     montoSolicitado: number
     estado: 'Pendiente' | 'Procesando' | 'Completado' | 'Rechazado'
-    fechaSolicitud: string
+    fechaSolicitud: string // Esta fecha viene como string del ISO format
     fechaActualizacion: string
     notasAdmin?: string
     urlComprobante?: string
@@ -58,6 +58,19 @@ interface Solicitud {
 // --- Utility Functions ---
 const formatCurrency = (amount: number) =>
     `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
+// Nueva función para formatear la fecha como la de MySQL
+const formatMySQLDateTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const seconds = date.getSeconds().toString().padStart(2, '0');
+    const milliseconds = date.getMilliseconds().toString().padStart(3, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}.${milliseconds}`;
+};
 
 const getStatusConfig = (estado: string) => {
     const configs = {
@@ -144,17 +157,13 @@ const CopyButton = ({
 )
 
 // --- Función para generar información completa ---
-const generateAccountInfo = (cuenta: CuentaBancaria, nombreArtista: string, monto: number, retiroId: string) => {
-    const fecha = new Date().toLocaleDateString('es-ES', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    })
+// MODIFICACIÓN CLAVE AQUÍ: Agregar fechaSolicitud como parámetro
+const generateAccountInfo = (cuenta: CuentaBancaria, nombreArtista: string, monto: number, retiroId: string, solicitudDate: string) => {
+    // Usar la fecha de solicitud que viene de la base de datos y formatearla
+    const formattedSolicitudDate = formatMySQLDateTime(solicitudDate);
 
     let info = `=== INFORMACIÓN DE TRANSFERENCIA ===\n`
-    info += `Fecha: ${fecha}\n`
+    info += `Fecha: ${formattedSolicitudDate}\n` // Usar la fecha de solicitud real
     info += `Artista: ${nombreArtista}\n`
     info += `Monto: ${formatCurrency(monto)}\n`
     info += `Titular: ${cuenta.nombreTitular}\n`
@@ -239,7 +248,7 @@ const generateAccountInfo = (cuenta: CuentaBancaria, nombreArtista: string, mont
     info += `\n=== REFERENCIAS IMPORTANTES ===\n`
     info += `ID Retiro: ${retiroId}\n`
     info += `Concepto: Pago de regalías - ${nombreArtista}\n`
-    info += `Fecha de solicitud: ${fecha}\n`
+    info += `Fecha de solicitud: ${formattedSolicitudDate}\n` // Usar la fecha de solicitud real
 
     info += `\n=== CHECKLIST POST-TRANSFERENCIA ===\n`
     info += `[ ] Transferencia realizada\n`
@@ -292,12 +301,8 @@ export default function SolicitudCard({ solicitud, onAction }: SolicitudCardProp
                         <div className="flex items-center gap-3 mt-0.5">
                             <p className="text-xs text-slate-400 flex items-center gap-1">
                                 <Calendar className="w-3 h-3" />
-                                {new Date(fechaSolicitud).toLocaleDateString('es-ES', {
-                                    day: 'numeric',
-                                    month: 'short',
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                })}
+                                {/* MODIFICACIÓN AQUÍ: Formatear fechaSolicitud con formatMySQLDateTime */}
+                                {formatMySQLDateTime(fechaSolicitud)}
                             </p>
                             <div className="flex items-center gap-1">
                                 <p className="text-xs text-slate-400">ID:</p>
@@ -335,7 +340,8 @@ export default function SolicitudCard({ solicitud, onAction }: SolicitudCardProp
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
                                 onClick={() => {
-                                    const accountInfo = generateAccountInfo(cuentaBancaria, usuario.nombreCompleto, montoSolicitado, id)
+                                    // MODIFICACIÓN CLAVE AQUÍ: Pasar fechaSolicitud a generateAccountInfo
+                                    const accountInfo = generateAccountInfo(cuentaBancaria, usuario.nombreCompleto, montoSolicitado, id, fechaSolicitud)
                                     copyToClipboard(accountInfo, 'account-full')
                                 }}
                                 className="flex items-center gap-1 px-2 py-1 text-xs text-slate-600 hover:text-slate-800 hover:bg-slate-200 rounded transition-colors"
@@ -431,7 +437,7 @@ export default function SolicitudCard({ solicitud, onAction }: SolicitudCardProp
                                                         return paisEncontrado ? paisEncontrado.name : cuentaBancaria.pais
                                                     })()}
                                                 </p>
-                                                <CopyButton text={cuentaBancaria.pais} field="pais" />
+                                                <CopyButton text={cuentaBancaria.pais} field="pais" copiedField={copiedField} onCopy={copyToClipboard} />
                                             </div>
                                         </div>
                                     )}
