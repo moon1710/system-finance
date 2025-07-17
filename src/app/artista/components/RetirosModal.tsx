@@ -15,6 +15,7 @@ interface CuentaBancaria {
     numeroCuenta?: string
     emailPaypal?: string
     esPredeterminada: boolean
+    pais?: string
 }
 
 interface RetiroModalProps {

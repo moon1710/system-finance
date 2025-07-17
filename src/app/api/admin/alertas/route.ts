@@ -173,3 +173,5 @@ export async function GET() {
   };
   return NextResponse.json(mockData);
 }
+
+//esto esta remal

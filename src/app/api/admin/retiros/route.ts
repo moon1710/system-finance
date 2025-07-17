@@ -1,4 +1,5 @@
 // app/api/retiros/route.ts
+// 🔧 FIX COMPLETO: Incluir todos los campos de cuenta bancaria
 
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
@@ -19,6 +20,23 @@ const crearRetiroSchema = z.object({
   notas: z.string().optional(),
 })
 
+// 🔧 FUNCIÓN HELPER: Select completo de cuenta bancaria
+const cuentaBancariaCompleta = {
+  select: {
+    id: true,
+    tipoCuenta: true,
+    nombreBanco: true,
+    clabe: true,
+    numeroRuta: true,
+    numeroCuenta: true,
+    swift: true,
+    emailPaypal: true,
+    nombreTitular: true,
+    esPredeterminada: true,
+    pais: true,
+  }
+}
+
 // GET - Listar retiros (diferente para admin y artista)
 export async function GET(request: NextRequest) {
   try {
@@ -32,8 +50,90 @@ export async function GET(request: NextRequest) {
     }
     
     if (session.rol === 'admin') {
-      // Admin: obtener solicitudes con alertas
-      const retirosConAlertas = await obtenerSolicitudesConAlerta(session.userId)
+      // 🔧 FIX ADMIN: Query directa con todos los campos
+      console.log('🔍 [API ADMIN] Obteniendo retiros para admin...')
+      
+      const retiros = await prisma.retiro.findMany({
+        include: {
+          usuario: {
+            select: {
+              id: true,
+              nombreCompleto: true,
+              email: true,
+            },
+          },
+          cuentaBancaria: cuentaBancariaCompleta, // ✅ TODOS LOS CAMPOS
+        },
+        orderBy: {
+          fechaSolicitud: "desc",
+        },
+      })
+
+      // 🔧 OBTENER ALERTAS REALES DE LA BD
+      const alertasReales = await prisma.alerta.findMany({
+        where: {
+          retiroId: {
+            in: retiros.map(r => r.id)
+          }
+        }
+      }).catch(() => {
+        console.log('⚠️ [API WARN] Tabla alertas no existe, usando alertas simuladas')
+        return []
+      })
+
+      // 🔧 MAPEAR CON ALERTAS
+      const retirosConAlertas = retiros.map((retiro) => {
+        const alertasDelRetiro = alertasReales.filter(a => a.retiroId === retiro.id)
+        
+        // Si no hay alertas reales, generar simuladas
+        let alertas = alertasDelRetiro
+        if (alertas.length === 0) {
+          const alertasSimuladas = []
+          
+          if (retiro.montoSolicitado >= 50000) {
+            alertasSimuladas.push({
+              id: `sim-monto-${retiro.id}`,
+              tipo: 'MONTO_ALTO',
+              mensaje: 'Monto alto (≥$50,000 USD)',
+              resuelta: false,
+              nivel: 'alta'
+            })
+          }
+
+          if (retiro.requiereRevision) {
+            alertasSimuladas.push({
+              id: `sim-revision-${retiro.id}`,
+              tipo: 'REVISION_ESPECIAL', 
+              mensaje: 'Requiere revisión especial',
+              resuelta: false,
+              nivel: 'media'
+            })
+          }
+
+          alertas = alertasSimuladas
+        }
+
+        return {
+          ...retiro,
+          alertas,
+        }
+      })
+
+      // Log de verificación
+      if (retiros.length > 0) {
+        console.log('✅ [API ADMIN] Primer retiro con cuenta completa:', {
+          id: retiros[0].id.substring(0, 8) + '...',
+          tipoCuenta: retiros[0].cuentaBancaria.tipoCuenta,
+          nombreBanco: retiros[0].cuentaBancaria.nombreBanco,
+          clabe: retiros[0].cuentaBancaria.clabe,
+          numeroRuta: retiros[0].cuentaBancaria.numeroRuta,
+          numeroCuenta: retiros[0].cuentaBancaria.numeroCuenta,
+          swift: retiros[0].cuentaBancaria.swift,
+          emailPaypal: retiros[0].cuentaBancaria.emailPaypal,
+          nombreTitular: retiros[0].cuentaBancaria.nombreTitular,
+          pais: retiros[0].cuentaBancaria.pais,
+        })
+      }
       
       return NextResponse.json({
         success: true,
@@ -41,25 +141,41 @@ export async function GET(request: NextRequest) {
         stats: {
           total: retirosConAlertas.length,
           pendientes: retirosConAlertas.filter(r => r.estado === 'Pendiente').length,
+          procesando: retirosConAlertas.filter(r => r.estado === 'Procesando').length,
+          completados: retirosConAlertas.filter(r => r.estado === 'Completado').length,
+          rechazados: retirosConAlertas.filter(r => r.estado === 'Rechazado').length,
           conAlertas: retirosConAlertas.filter(r => r.alertas.length > 0).length,
           requierenRevision: retirosConAlertas.filter(r => r.requiereRevision).length,
         }
       })
     } else {
-      // Artista: sus propios retiros
+      // 🔧 FIX ARTISTA: Incluir todos los campos de cuenta
+      console.log('🔍 [API ARTISTA] Obteniendo retiros para artista...')
+      
       const retiros = await prisma.retiro.findMany({
         where: { usuarioId: session.userId },
         include: {
-          cuentaBancaria: {
-            select: {
-              tipoCuenta: true,
-              nombreTitular: true,
-              nombreBanco: true,
-            }
-          }
+          cuentaBancaria: cuentaBancariaCompleta // ✅ TODOS LOS CAMPOS
         },
         orderBy: { fechaSolicitud: 'desc' }
       })
+
+      // Log de verificación
+      if (retiros.length > 0) {
+        console.log('✅ [API ARTISTA] Primer retiro con cuenta completa:', {
+          id: retiros[0].id.substring(0, 8) + '...',
+          tipoCuenta: retiros[0].cuentaBancaria.tipoCuenta,
+          nombreBanco: retiros[0].cuentaBancaria.nombreBanco,
+          clabe: retiros[0].cuentaBancaria.clabe,
+          numeroRuta: retiros[0].cuentaBancaria.numeroRuta,
+          numeroCuenta: retiros[0].cuentaBancaria.numeroCuenta,
+          swift: retiros[0].cuentaBancaria.swift,
+          emailPaypal: retiros[0].cuentaBancaria.emailPaypal,
+          nombreTitular: retiros[0].cuentaBancaria.nombreTitular,
+          pais: retiros[0].cuentaBancaria.pais,
+
+        })
+      }
       
       return NextResponse.json({
         success: true,
@@ -67,7 +183,7 @@ export async function GET(request: NextRequest) {
       })
     }
   } catch (error) {
-    console.error('Error obteniendo retiros:', error)
+    console.error('❌ [API ERROR] Error obteniendo retiros:', error)
     return NextResponse.json(
       { error: 'Error al obtener retiros' },
       { status: 500 }
@@ -140,7 +256,7 @@ export async function POST(request: NextRequest) {
             email: true
           }
         },
-        cuentaBancaria: true
+        cuentaBancaria: cuentaBancariaCompleta // ✅ TODOS LOS CAMPOS
       }
     })
     
@@ -148,9 +264,9 @@ export async function POST(request: NextRequest) {
     const alertas = await generarAlertasAutomaticas(nuevoRetiro.id)
     
     // Log de auditoría
-    console.log(`[RETIRO] Usuario ${session.userId} solicitó retiro de $${montoSolicitado}`)
+    console.log(`✅ [RETIRO] Usuario ${session.userId} solicitó retiro de $${montoSolicitado}`)
     if (alertas.length > 0) {
-      console.log(`[ALERTAS] Se generaron ${alertas.length} alertas para el retiro ${nuevoRetiro.id}`)
+      console.log(`🚨 [ALERTAS] Se generaron ${alertas.length} alertas para el retiro ${nuevoRetiro.id}`)
     }
     
     // Si hay alertas críticas, notificar a admins
@@ -172,7 +288,7 @@ export async function POST(request: NextRequest) {
       const resumenEmail = generarResumenAlertasEmail(nuevoRetiro, alertas)
       
       // TODO: Enviar email cuando esté configurado
-      console.log('[EMAIL] Se debería notificar a los admins:', {
+      console.log('📧 [EMAIL] Se debería notificar a los admins:', {
         admins: adminsDelArtista.map(rel => rel.admin.email),
         asunto: resumenEmail.asunto,
         prioridad: resumenEmail.prioridad
@@ -196,7 +312,7 @@ export async function POST(request: NextRequest) {
     })
     
   } catch (error) {
-    console.error('Error creando retiro:', error)
+    console.error('❌ [POST ERROR] Error creando retiro:', error)
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(

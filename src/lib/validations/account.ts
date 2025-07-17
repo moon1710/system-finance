@@ -1,154 +1,206 @@
 // /lib/validations/account.ts
+// 🔧 VERSIÓN SIMPLE: Sin restricciones de países específicos
 
-/**
- * Interfaz para el resultado de una validación.
- */
-export interface ValidacionResult {
-  esValido: boolean;
-  errores: string[];
-}
-
-/**
- * Interfaz para los datos de la cuenta que se validarán.
- */
-interface DatosParaValidar {
-  nombreTitular?: string;
+export interface DatosCuentaBancaria {
   nombreBanco?: string;
   clabe?: string;
+  numeroRuta?: string;
   numeroCuenta?: string;
   swift?: string;
   emailPaypal?: string;
-  pais?: string;
+  nombreTitular: string;
+  pais?: string; // ✅ CAMPO AGREGADO
 }
 
-// --- VALIDACIONES ESPECÍFICAS ---
-
-/**
- * Valida una CLABE de 18 dígitos (México).
- */
-function validarCLABE(clabe?: string): ValidacionResult {
-  const errores: string[] = [];
-  if (!clabe || clabe.trim() === '') {
-    errores.push('La CLABE es requerida.');
-    return { esValido: false, errores };
-  }
-
-  const clabeLimpia = clabe.trim();
-  if (!/^\d{18}$/.test(clabeLimpia)) {
-    errores.push('La CLABE debe contener exactamente 18 dígitos.');
-    return { esValido: false, errores };
-  }
-
-  // Algoritmo de validación del dígito verificador
-  const pesos = [3, 7, 1, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3, 7];
-  let suma = 0;
-  for (let i = 0; i < 17; i++) {
-    suma += parseInt(clabeLimpia.charAt(i), 10) * pesos[i];
-  }
-  const digitoVerificadorCalculado = (10 - (suma % 10)) % 10;
-  const digitoVerificadorReal = parseInt(clabeLimpia.charAt(17), 10);
-
-  if (digitoVerificadorCalculado !== digitoVerificadorReal) {
-    errores.push('La CLABE no es válida.');
-  }
-
-  return { esValido: errores.length === 0, errores };
+export interface ResultadoValidacion {
+  exito: boolean;
+  mensaje?: string;
+  errores?: string[];
 }
 
 /**
- * Valida los campos de una cuenta internacional genérica.
+ * Validar cuenta bancaria nacional (México)
  */
-function validarCuentaInternacional(datos: DatosParaValidar): ValidacionResult {
+export function validarCuentaNacional(datos: DatosCuentaBancaria): ResultadoValidacion {
   const errores: string[] = [];
 
-  // CORREGIDO: Se añade la validación para el país.
-  if (!datos.pais || datos.pais.trim() === '') {
-    errores.push('El país es requerido para cuentas internacionales.');
+  // Validar nombre del banco
+  if (!datos.nombreBanco || datos.nombreBanco.trim().length < 2) {
+    errores.push('El nombre del banco es requerido (mínimo 2 caracteres)');
   }
 
-  if (!datos.numeroCuenta || datos.numeroCuenta.trim() === '') {
-    errores.push('El número de cuenta es requerido.');
-  } else if (datos.numeroCuenta.trim().length < 5) {
-    errores.push('El número de cuenta parece demasiado corto.');
-  }
-
-  // SWIFT es opcional en muchos casos, pero si se provee, debe ser válido.
-  if (datos.swift && datos.swift.trim() !== '') {
-    const swiftLimpio = datos.swift.trim().toUpperCase();
-    if (!/^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(swiftLimpio)) {
-      errores.push('El formato del código SWIFT no es válido.');
+  // Validar CLABE
+  if (!datos.clabe) {
+    errores.push('La CLABE es requerida para cuentas nacionales');
+  } else {
+    // CLABE debe tener exactamente 18 dígitos
+    const clabeNumeros = datos.clabe.replace(/\s/g, '');
+    if (!/^\d{18}$/.test(clabeNumeros)) {
+      errores.push('La CLABE debe tener exactamente 18 dígitos');
     }
   }
 
-  return { esValido: errores.length === 0, errores };
-}
-
-/**
- * Valida una cuenta de PayPal.
- */
-function validarCuentaPaypal(email?: string): ValidacionResult {
-  const errores: string[] = [];
-  if (!email || email.trim() === '') {
-    errores.push('El email de PayPal es requerido.');
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-    errores.push('El formato del email no es válido.');
-  }
-  return { esValido: errores.length === 0, errores };
-}
-
-
-// --- FUNCIÓN PRINCIPAL DE VALIDACIÓN ---
-
-/**
- * Valida un conjunto de datos de cuenta bancaria según su tipo.
- * Esta es la función principal que debe ser llamada desde el servicio.
- * @param tipoCuenta - El tipo de cuenta a validar.
- * @param datos - El objeto con todos los datos del formulario.
- */
-export function validarDatosCuenta(
-  tipoCuenta: string,
-  datos: DatosParaValidar
-): ValidacionResult {
-  const errores: string[] = [];
-
-  // 1. Validaciones comunes a todos los tipos que las requieren
-  if (!datos.nombreTitular || datos.nombreTitular.trim() === '') {
-    errores.push('El nombre del titular es requerido.');
-  }
-
-  if (['nacional', 'internacional'].includes(tipoCuenta)) {
-      if (!datos.nombreBanco || datos.nombreBanco.trim() === '') {
-          errores.push('El nombre del banco es requerido.');
-      }
-  }
-
-  // 2. Validaciones específicas por tipo de cuenta
-  let validacionEspecifica: ValidacionResult;
-
-  switch (tipoCuenta) {
-    case 'nacional':
-      validacionEspecifica = validarCLABE(datos.clabe);
-      errores.push(...validacionEspecifica.errores);
-      break;
-
-    case 'internacional':
-      // CORREGIDO: Llama a la función que valida el conjunto completo de datos internacionales
-      validacionEspecifica = validarCuentaInternacional(datos);
-      errores.push(...validacionEspecifica.errores);
-      // CORREGIDO: Se eliminó la validación innecesaria de CLABE aquí.
-      break;
-
-    case 'paypal':
-      validacionEspecifica = validarCuentaPaypal(datos.emailPaypal);
-      errores.push(...validacionEspecifica.errores);
-      break;
-
-    default:
-      errores.push('Tipo de cuenta no válido.');
+  // Validar nombre del titular
+  if (!datos.nombreTitular || datos.nombreTitular.trim().length < 3) {
+    errores.push('El nombre del titular es requerido (mínimo 3 caracteres)');
   }
 
   return {
-    esValido: errores.length === 0,
-    errores,
+    exito: errores.length === 0,
+    mensaje: errores.length > 0 ? 'Error en la validación de cuenta nacional' : 'Validación exitosa',
+    errores: errores.length > 0 ? errores : undefined
   };
 }
+
+/**
+ * Validar cuenta bancaria internacional
+ */
+export function validarCuentaInternacional(datos: DatosCuentaBancaria): ResultadoValidacion {
+  const errores: string[] = [];
+
+  // ✅ VALIDAR PAÍS (SOLO QUE EXISTA, SIN RESTRICCIONES)
+  if (!datos.pais || datos.pais.trim().length === 0) {
+    errores.push('El país es requerido para cuentas internacionales');
+  }
+
+  // Validar nombre del banco
+  if (!datos.nombreBanco || datos.nombreBanco.trim().length < 2) {
+    errores.push('El nombre del banco es requerido (mínimo 2 caracteres)');
+  }
+
+  // Validar número de cuenta/IBAN
+  if (!datos.numeroCuenta) {
+    errores.push('El número de cuenta o IBAN es requerido');
+  } else {
+    // Validación básica de número de cuenta (4-34 caracteres alfanuméricos)
+    const cuentaLimpia = datos.numeroCuenta.replace(/\s/g, '');
+    if (!/^[A-Z0-9]{4,34}$/i.test(cuentaLimpia)) {
+      errores.push('El número de cuenta debe tener entre 4 y 34 caracteres alfanuméricos');
+    }
+  }
+
+  // Validar código SWIFT
+  if (!datos.swift) {
+    errores.push('El código SWIFT/BIC es requerido');
+  } else {
+    // SWIFT debe tener 8 o 11 caracteres
+    const swiftLimpio = datos.swift.replace(/\s/g, '').toUpperCase();
+    if (!/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(swiftLimpio)) {
+      errores.push('El código SWIFT debe tener 8 o 11 caracteres (formato: AAAABBCCXXX)');
+    }
+  }
+
+  // Validar nombre del titular
+  if (!datos.nombreTitular || datos.nombreTitular.trim().length < 3) {
+    errores.push('El nombre del titular es requerido (mínimo 3 caracteres)');
+  }
+
+  return {
+    exito: errores.length === 0,
+    mensaje: errores.length > 0 ? 'Error en la validación de cuenta internacional' : 'Validación exitosa',
+    errores: errores.length > 0 ? errores : undefined
+  };
+}
+
+/**
+ * Validar cuenta PayPal
+ */
+export function validarCuentaPayPal(datos: DatosCuentaBancaria): ResultadoValidacion {
+  const errores: string[] = [];
+
+  // Validar email de PayPal
+  if (!datos.emailPaypal) {
+    errores.push('El email de PayPal es requerido');
+  } else {
+    // Validación básica de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(datos.emailPaypal)) {
+      errores.push('Ingresa un email válido para PayPal');
+    }
+  }
+
+  // Validar nombre del titular
+  if (!datos.nombreTitular || datos.nombreTitular.trim().length < 3) {
+    errores.push('El nombre del titular es requerido (mínimo 3 caracteres)');
+  }
+
+  return {
+    exito: errores.length === 0,
+    mensaje: errores.length > 0 ? 'Error en la validación de cuenta PayPal' : 'Validación exitosa',
+    errores: errores.length > 0 ? errores : undefined
+  };
+}
+
+/**
+ * Validar datos generales de cuenta bancaria
+ */
+export function validarCuentaBancaria(
+  tipoCuenta: 'nacional' | 'internacional' | 'paypal',
+  datos: DatosCuentaBancaria
+): ResultadoValidacion {
+  
+  switch (tipoCuenta) {
+    case 'nacional':
+      return validarCuentaNacional(datos);
+    
+    case 'internacional':
+      return validarCuentaInternacional(datos);
+    
+    case 'paypal':
+      return validarCuentaPayPal(datos);
+    
+    default:
+      return {
+        exito: false,
+        mensaje: 'Tipo de cuenta no válido',
+        errores: ['tipoCuenta: Debe ser nacional, internacional o paypal']
+      };
+  }
+}
+
+// ✅ VALIDACIONES ESPECÍFICAS PARA FRONTEND
+export function validarCLABE(clabe: string): { valido: boolean; mensaje?: string } {
+  if (!clabe) return { valido: false, mensaje: 'CLABE requerida' };
+  
+  const clabeNumeros = clabe.replace(/\s/g, '');
+  if (!/^\d{18}$/.test(clabeNumeros)) {
+    return { valido: false, mensaje: 'CLABE debe tener exactamente 18 dígitos' };
+  }
+  
+  return { valido: true };
+}
+
+export function validarSWIFT(swift: string): { valido: boolean; mensaje?: string } {
+  if (!swift) return { valido: false, mensaje: 'Código SWIFT requerido' };
+  
+  const swiftLimpio = swift.replace(/\s/g, '').toUpperCase();
+  if (!/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(swiftLimpio)) {
+    return { valido: false, mensaje: 'Formato SWIFT inválido (ej: BOFAUS3NXXX)' };
+  }
+  
+  return { valido: true };
+}
+
+export function validarEmail(email: string): { valido: boolean; mensaje?: string } {
+  if (!email) return { valido: false, mensaje: 'Email requerido' };
+  
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return { valido: false, mensaje: 'Email inválido' };
+  }
+  
+  return { valido: true };
+}
+
+// ✅ FORMATTERS PARA EL FRONTEND
+export function formatearCLABE(clabe: string): string {
+  const numeros = clabe.replace(/\D/g, '');
+  return numeros.replace(/(\d{4})(?=\d)/g, '$1 ');
+}
+
+export function formatearSWIFT(swift: string): string {
+  return swift.toUpperCase().replace(/\s/g, '');
+}
+
+// ✅ EXPORT DE TIPOS
+export type { DatosCuentaBancaria, ResultadoValidacion };

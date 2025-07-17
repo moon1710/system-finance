@@ -33,25 +33,94 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (session.rol !== "artista") {
+    if (session.rol !== "admin") {
       return NextResponse.json(
-        { error: "Solo los artistas pueden ver retiros" },
+        { error: "Solo los administradores pueden ver todas las solicitudes" },
         { status: 403 }
       );
     }
 
-    const resultado = await obtenerRetirosUsuario(session.userId);
+    // 🔧 FIX: Incluir TODOS los campos de cuentaBancaria
+    const retiros = await prisma.retiro.findMany({
+      include: {
+        usuario: {
+          select: {
+            nombreCompleto: true,
+            email: true,
+          },
+        },
+        cuentaBancaria: {
+          select: {
+            // ✅ TODOS LOS CAMPOS NECESARIOS
+            tipoCuenta: true,
+            nombreBanco: true,
+            nombreTitular: true,
+            clabe: true,
+            numeroRuta: true,
+            numeroCuenta: true,
+            swift: true,
+            emailPaypal: true,
+          },
+        },
+      },
+      orderBy: {
+        fechaSolicitud: "desc",
+      },
+    });
 
-    if (!resultado.exito) {
-      return NextResponse.json({ error: resultado.mensaje }, { status: 400 });
-    }
+    // 🔧 FIX: Mapear con alertas simuladas (hasta implementar sistema completo)
+    const retirosConAlertas = retiros.map((retiro) => {
+      const alertas = [];
+      
+      // Generar alertas basadas en las reglas de negocio
+      if (retiro.montoSolicitado >= 50000) {
+        alertas.push({
+          id: `alerta-monto-${retiro.id}`,
+          tipo: 'monto_alto',
+          mensaje: 'Monto alto (≥$50,000 USD)',
+          resuelta: false,
+        });
+      }
+
+      // Alerta de retiros múltiples (simulada por ahora)
+      if (retiro.requiereRevision) {
+        alertas.push({
+          id: `alerta-revision-${retiro.id}`,
+          tipo: 'revision_especial',
+          mensaje: 'Requiere revisión especial',
+          resuelta: false,
+        });
+      }
+
+      return {
+        ...retiro,
+        alertas,
+      };
+    });
+
+    // Calcular estadísticas
+    const estadisticas = {
+      total: retiros.length,
+      pendientes: retiros.filter((r) => r.estado === "Pendiente").length,
+      procesando: retiros.filter((r) => r.estado === "Procesando").length,
+      completados: retiros.filter((r) => r.estado === "Completado").length,
+      rechazados: retiros.filter((r) => r.estado === "Rechazado").length,
+      conAlertas: retirosConAlertas.filter((r) => r.alertas.length > 0).length,
+    };
+
+    console.log('🔍 [API DEBUG] Retiro de ejemplo con cuenta completa:', {
+      id: retiros[0]?.id,
+      cuentaBancaria: retiros[0]?.cuentaBancaria,
+      usuario: retiros[0]?.usuario.nombreCompleto
+    });
 
     return NextResponse.json({
       success: true,
-      retiros: resultado.data,
+      retiros: retirosConAlertas,
+      stats: estadisticas,
     });
   } catch (error) {
-    console.error("Error en GET /api/retiros:", error);
+    console.error("❌ Error en GET /api/admin/retiros:", error);
     return NextResponse.json(
       { error: "Error interno del servidor" },
       { status: 500 }
@@ -59,6 +128,113 @@ export async function GET(request: NextRequest) {
   }
 }
 
+
+// 🔧 VERSIÓN ALTERNATIVA CON QUERY RAW SI PRISMA DA PROBLEMAS
+export async function GET_RAW_VERSION(request: NextRequest) {
+  try {
+    const session = await getIronSession<SessionData>(
+      request,
+      new NextResponse(),
+      sessionOptions
+    );
+
+    if (!session.isLoggedIn || !session.userId) {
+      return NextResponse.json(
+        { error: "Usuario no autenticado" },
+        { status: 401 }
+      );
+    }
+
+    if (session.rol !== "admin") {
+      return NextResponse.json(
+        { error: "Solo los administradores pueden ver todas las solicitudes" },
+        { status: 403 }
+      );
+    }
+
+    // Query RAW para asegurar que todos los campos lleguen
+    const retirosRaw = await prisma.$queryRaw`
+      SELECT 
+        r.id,
+        r.monto_solicitado as montoSolicitado,
+        r.estado,
+        r.fecha_solicitud as fechaSolicitud,
+        r.fecha_actualizacion as fechaActualizacion,
+        r.notas_admin as notasAdmin,
+        r.url_comprobante as urlComprobante,
+        r.requiere_revision as requiereRevision,
+        
+        -- Usuario
+        u.nombre_completo as usuarioNombre,
+        u.email as usuarioEmail,
+        
+        -- Cuenta Bancaria - TODOS LOS CAMPOS
+        cb.tipo_cuenta as tipoCuenta,
+        cb.nombre_banco as nombreBanco,
+        cb.nombre_titular as nombreTitular,
+        cb.clabe,
+        cb.numero_ruta as numeroRuta,
+        cb.numero_cuenta as numeroCuenta,
+        cb.swift,
+        cb.email_paypal as emailPaypal
+        
+      FROM retiros r
+      INNER JOIN usuarios u ON r.usuario_id = u.id
+      INNER JOIN cuentas_bancarias cb ON r.cuenta_bancaria_id = cb.id
+      ORDER BY r.fecha_solicitud DESC
+    `;
+
+    // Mapear resultado raw a formato esperado
+    const retirosFormateados = retirosRaw.map((r: any) => ({
+      id: r.id,
+      montoSolicitado: parseFloat(r.montoSolicitado),
+      estado: r.estado,
+      fechaSolicitud: r.fechaSolicitud,
+      fechaActualizacion: r.fechaActualizacion,
+      notasAdmin: r.notasAdmin,
+      urlComprobante: r.urlComprobante,
+      requiereRevision: Boolean(r.requiereRevision),
+      usuario: {
+        nombreCompleto: r.usuarioNombre,
+        email: r.usuarioEmail,
+      },
+      cuentaBancaria: {
+        tipoCuenta: r.tipoCuenta,
+        nombreBanco: r.nombreBanco,
+        nombreTitular: r.nombreTitular,
+        clabe: r.clabe,
+        numeroRuta: r.numeroRuta,
+        numeroCuenta: r.numeroCuenta,
+        swift: r.swift,
+        emailPaypal: r.emailPaypal,
+      },
+      alertas: []
+    }));
+
+    console.log('🔍 [RAW DEBUG] Primer retiro con todos los campos:', 
+      JSON.stringify(retirosFormateados[0], null, 2)
+    );
+
+    return NextResponse.json({
+      success: true,
+      retiros: retirosFormateados,
+      stats: {
+        total: retirosFormateados.length,
+        pendientes: retirosFormateados.filter((r) => r.estado === "Pendiente").length,
+        procesando: retirosFormateados.filter((r) => r.estado === "Procesando").length,
+        completados: retirosFormateados.filter((r) => r.estado === "Completado").length,
+        rechazados: retirosFormateados.filter((r) => r.estado === "Rechazado").length,
+        conAlertas: 0
+      },
+    });
+  } catch (error) {
+    console.error("❌ Error en GET RAW /api/admin/retiros:", error);
+    return NextResponse.json(
+      { error: "Error interno del servidor" },
+      { status: 500 }
+    );
+  }
+}
 /**
  * POST /api/retiros
  * Crear nueva solicitud de retiro
