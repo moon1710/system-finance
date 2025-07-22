@@ -103,7 +103,13 @@ const CuentaModal: React.FC<CuentaModalProps> = ({ show, onClose, onSubmit, form
                         </>
                     )}
                     {type === 'paypal' && (
-                        <div className="md:col-span-2"><FormInput label="Email de PayPal *" id="emailPaypal" icon={<Mail className="text-gray-400 w-5 h-5" />} type="email" required value={formData.emailPaypal || ''} onChange={(e: any) => setFormData({ ...formData, emailPaypal: e.target.value })} /></div>
+                        <>
+                            <div className="md:col-span-2 text-lg font-bold text-gray-700 mb-2">Datos de PayPal</div>
+                            <div className="md:col-span-2"> {/* Este campo ocupa todo el ancho en ambas vistas */}
+                                <FormInput label="Email de PayPal *" id="emailPaypal" icon={<Mail className="text-gray-400 w-5 h-5" />} type="email" required value={formData.emailPaypal || ''} onChange={(e: any) => setFormData({ ...formData, emailPaypal: e.target.value })} />
+                            </div>
+                            {/* El nombre del titular (formData.nombreTitular) ya lo tienes fuera de renderFields, lo cual es correcto si es un campo común a todos. */}
+                        </>
                     )}
                 </motion.div>
             </AnimatePresence>
