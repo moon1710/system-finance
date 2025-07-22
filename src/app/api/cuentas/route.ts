@@ -84,18 +84,23 @@ export async function POST(request: NextRequest) {
     }
 
     // Crear la cuenta
-    const resultado = await crearCuentaBancaria(userId, body.tipoCuenta, {
-      tipoCuenta: body.tipoCuenta,
-      nombreBanco: body.nombreBanco,
-      clabe: body.clabe,
-      numeroCuenta: body.numeroCuenta,
-      swift: body.swift,
-      emailPaypal: body.emailPaypal,
-      nombreTitular: body.nombreTitular,
-      esPredeterminada: body.esPredeterminada,
-      // --- PASAR EL NUEVO CAMPO ---
-      pais: body.pais 
-    });
+  const resultado = await crearCuentaBancaria(userId, body.tipoCuenta, {
+    tipoCuenta: body.tipoCuenta,
+    nombreBanco: body.nombreBanco,
+    clabe: body.clabe,
+    numeroRuta: body.numeroRuta,              // <--- Nuevo: ABA/routing si USA
+    numeroCuenta: body.numeroCuenta,
+    iban: body.iban,                          // <--- Nuevo
+    swift: body.swift,
+    emailPaypal: body.emailPaypal,
+    nombreTitular: body.nombreTitular,
+    direccionTitular: body.direccionTitular,  // <--- Nuevo: Dirección del titular
+    direccionBanco: body.direccionBanco,      // <--- Nuevo: Dirección del banco
+    paisBanco: body.paisBanco,                // <--- Nuevo
+    pais: body.pais,
+    abaRouting: body.abaRouting,              // <--- Nuevo
+    esPredeterminada: body.esPredeterminada
+  });
 
     if (!resultado.exito) {
       return NextResponse.json({ error: resultado.mensaje, errores: resultado.errores }, { status: 400 });

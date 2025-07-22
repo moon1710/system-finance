@@ -24,25 +24,16 @@ export interface ResultadoValidacion {
 export function validarCuentaNacional(datos: DatosCuentaBancaria): ResultadoValidacion {
   const errores: string[] = [];
 
-  // Validar nombre del banco
   if (!datos.nombreBanco || datos.nombreBanco.trim().length < 2) {
-    errores.push('El nombre del banco es requerido (mínimo 2 caracteres)');
+    errores.push('El nombre del banco es requerido');
   }
 
-  // Validar CLABE
-  if (!datos.clabe) {
-    errores.push('La CLABE es requerida para cuentas nacionales');
-  } else {
-    // CLABE debe tener exactamente 18 dígitos
-    const clabeNumeros = datos.clabe.replace(/\s/g, '');
-    if (!/^\d{18}$/.test(clabeNumeros)) {
-      errores.push('La CLABE debe tener exactamente 18 dígitos');
-    }
+  if (!datos.clabe || datos.clabe.replace(/\s/g, '').length < 10) { // Solo mínimo 10 dígitos, sin exigir 18 exactos
+    errores.push('La CLABE debe tener al menos 10 dígitos');
   }
 
-  // Validar nombre del titular
-  if (!datos.nombreTitular || datos.nombreTitular.trim().length < 3) {
-    errores.push('El nombre del titular es requerido (mínimo 3 caracteres)');
+  if (!datos.nombreTitular || datos.nombreTitular.trim().length < 2) {
+    errores.push('El nombre del titular es requerido');
   }
 
   return {
@@ -51,79 +42,47 @@ export function validarCuentaNacional(datos: DatosCuentaBancaria): ResultadoVali
     errores: errores.length > 0 ? errores : undefined
   };
 }
-
 /**
  * Validar cuenta bancaria internacional
  */
 export function validarCuentaInternacional(datos: DatosCuentaBancaria): ResultadoValidacion {
   const errores: string[] = [];
 
-  // ✅ VALIDAR PAÍS (SOLO QUE EXISTA, SIN RESTRICCIONES)
-  if (!datos.pais || datos.pais.trim().length === 0) {
-    errores.push('El país es requerido para cuentas internacionales');
+  if (!datos.pais) {
+    errores.push('El país es requerido');
   }
-
-  // Validar nombre del banco
   if (!datos.nombreBanco || datos.nombreBanco.trim().length < 2) {
-    errores.push('El nombre del banco es requerido (mínimo 2 caracteres)');
+    errores.push('El nombre del banco es requerido');
   }
-
-  // Validar número de cuenta/IBAN
   if (!datos.numeroCuenta) {
     errores.push('El número de cuenta o IBAN es requerido');
-  } else {
-    // Validación básica de número de cuenta (4-34 caracteres alfanuméricos)
-    const cuentaLimpia = datos.numeroCuenta.replace(/\s/g, '');
-    if (!/^[A-Z0-9]{4,34}$/i.test(cuentaLimpia)) {
-      errores.push('El número de cuenta debe tener entre 4 y 34 caracteres alfanuméricos');
-    }
+  } else if (datos.numeroCuenta.replace(/\s/g, '').length < 4) {
+    errores.push('El número de cuenta debe tener al menos 4 caracteres');
   }
-
-  // Validar código SWIFT
-  if (!datos.swift) {
+  if (!datos.swift || datos.swift.length < 6) { // No exige formato exacto, solo presencia y mínimo 6
     errores.push('El código SWIFT/BIC es requerido');
-  } else {
-    // SWIFT debe tener 8 o 11 caracteres
-    const swiftLimpio = datos.swift.replace(/\s/g, '').toUpperCase();
-    if (!/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(swiftLimpio)) {
-      errores.push('El código SWIFT debe tener 8 o 11 caracteres (formato: AAAABBCCXXX)');
-    }
   }
-
-  // Validar nombre del titular
-  if (!datos.nombreTitular || datos.nombreTitular.trim().length < 3) {
-    errores.push('El nombre del titular es requerido (mínimo 3 caracteres)');
+  if (!datos.nombreTitular || datos.nombreTitular.trim().length < 2) {
+    errores.push('El nombre del titular es requerido');
   }
-
   return {
     exito: errores.length === 0,
     mensaje: errores.length > 0 ? 'Error en la validación de cuenta internacional' : 'Validación exitosa',
     errores: errores.length > 0 ? errores : undefined
   };
 }
-
 /**
- * Validar cuenta PayPal
+ * Validar cuenta bancaria paypal
  */
 export function validarCuentaPayPal(datos: DatosCuentaBancaria): ResultadoValidacion {
   const errores: string[] = [];
 
-  // Validar email de PayPal
   if (!datos.emailPaypal) {
     errores.push('El email de PayPal es requerido');
-  } else {
-    // Validación básica de email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(datos.emailPaypal)) {
-      errores.push('Ingresa un email válido para PayPal');
-    }
   }
-
-  // Validar nombre del titular
-  if (!datos.nombreTitular || datos.nombreTitular.trim().length < 3) {
-    errores.push('El nombre del titular es requerido (mínimo 3 caracteres)');
+  if (!datos.nombreTitular || datos.nombreTitular.trim().length < 2) {
+    errores.push('El nombre del titular es requerido');
   }
-
   return {
     exito: errores.length === 0,
     mensaje: errores.length > 0 ? 'Error en la validación de cuenta PayPal' : 'Validación exitosa',

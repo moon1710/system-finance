@@ -80,14 +80,19 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       tipoCuenta: body.tipoCuenta,
       nombreBanco: body.nombreBanco,
       clabe: body.clabe,
-      numeroRuta: body.numeroRuta,
+      numeroRuta: body.numeroRuta,              // <--- Nuevo
       numeroCuenta: body.numeroCuenta,
+      iban: body.iban,                          // <--- Nuevo
       swift: body.swift,
       emailPaypal: body.emailPaypal,
       nombreTitular: body.nombreTitular,
-      esPredeterminada: body.esPredeterminada,
-      pais: body.pais // ✅ INCLUIR EL PAÍS
-    })
+      direccionTitular: body.direccionTitular,  // <--- Nuevo
+      direccionBanco: body.direccionBanco,      // <--- Nuevo
+      paisBanco: body.paisBanco,                // <--- Nuevo
+      pais: body.pais,
+      abaRouting: body.abaRouting,              // <--- Nuevo
+      esPredeterminada: body.esPredeterminada
+    });
 
     if (!resultado.exito) {
       return NextResponse.json(

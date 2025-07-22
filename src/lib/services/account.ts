@@ -21,13 +21,18 @@ export interface DatosCuenta {
   tipoCuenta: 'nacional' | 'internacional' | 'paypal';
   nombreBanco?: string;
   clabe?: string;
-  numeroRuta?: string;
-  numeroCuenta?: string;
+  numeroRuta?: string;        // ABA/Routing para USA
+  numeroCuenta?: string;      // O IBAN internacional
+  iban?: string;              // IBAN internacional
   swift?: string;
   emailPaypal?: string;
   nombreTitular: string;
+  direccionTitular?: string;  // dirección completa del titular (internacional)
+  direccionBanco?: string;    // dirección del banco (internacional)
+  paisBanco?: string;         // país del banco (internacional)
+  pais?: string;
+  abaRouting?: string;        // ABA/routing (solo USA)
   esPredeterminada?: boolean;
-  pais?: string; // ✅ CAMPO AGREGADO
 }
 
 /**
@@ -119,10 +124,15 @@ export async function crearCuentaBancaria(
         clabe: datos.clabe,
         numeroRuta: datos.numeroRuta,
         numeroCuenta: datos.numeroCuenta,
+        iban: datos.iban,            
         swift: datos.swift,
         emailPaypal: datos.emailPaypal,
         nombreTitular: datos.nombreTitular,
-        pais: datos.pais, // ✅ INCLUIR EL PAÍS
+        direccionTitular: datos.direccionTitular, 
+        direccionBanco: datos.direccionBanco,  
+        paisBanco: datos.paisBanco,  
+        pais: datos.pais,
+        abaRouting: datos.abaRouting,
         esPredeterminada: datos.esPredeterminada || esPrimeraCuenta
       }
     });
@@ -247,21 +257,26 @@ export async function actualizarCuentaBancaria(
     }
 
     // 🔧 ACTUALIZAR LA CUENTA CON TODOS LOS CAMPOS
-    const cuentaActualizada = await prisma.cuentaBancaria.update({
-      where: { id: cuentaId },
-      data: {
-        tipoCuenta: datos.tipoCuenta,
-        nombreBanco: datos.nombreBanco,
-        clabe: datos.clabe,
-        numeroRuta: datos.numeroRuta,
-        numeroCuenta: datos.numeroCuenta,
-        swift: datos.swift,
-        emailPaypal: datos.emailPaypal,
-        nombreTitular: datos.nombreTitular,
-        pais: datos.pais, // ✅ ACTUALIZAR EL PAÍS
-        esPredeterminada: datos.esPredeterminada
-      }
-    });
+  const cuentaActualizada = await prisma.cuentaBancaria.update({
+    where: { id: cuentaId },
+    data: {
+      tipoCuenta: datos.tipoCuenta,
+      nombreBanco: datos.nombreBanco,
+      clabe: datos.clabe,
+      numeroRuta: datos.numeroRuta,
+      numeroCuenta: datos.numeroCuenta,
+      iban: datos.iban,                  // Añade esto
+      swift: datos.swift,
+      emailPaypal: datos.emailPaypal,
+      nombreTitular: datos.nombreTitular,
+      direccionTitular: datos.direccionTitular, // Añade esto
+      direccionBanco: datos.direccionBanco,     // Añade esto
+      paisBanco: datos.paisBanco,               // Añade esto
+      pais: datos.pais,
+      abaRouting: datos.abaRouting,             // Añade esto
+      esPredeterminada: datos.esPredeterminada
+    }
+  });
 
     console.log('✅ [SERVICE] Cuenta actualizada exitosamente:', {
       id: cuentaActualizada.id,
