@@ -16,7 +16,7 @@ import { prisma } from "@/lib/db"; // Necesario para obtener datos del artista y
 
 /**
  * GET /api/retiros
- * Obtener historial de retiros del usuario autenticado
+ * ✅ CORREGIDO: Obtener retiros DEL ARTISTA autenticado (no de todos)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -33,94 +33,33 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (session.rol !== "admin") {
+    // ✅ CAMBIO PRINCIPAL: Validar que sea ARTISTA, no admin
+    if (session.rol !== "artista") {
       return NextResponse.json(
-        { error: "Solo los administradores pueden ver todas las solicitudes" },
+        { error: "Solo los artistas pueden ver sus retiros" },
         { status: 403 }
       );
     }
 
-    // 🔧 FIX: Incluir TODOS los campos de cuentaBancaria
-    const retiros = await prisma.retiro.findMany({
-      include: {
-        usuario: {
-          select: {
-            nombreCompleto: true,
-            email: true,
-          },
-        },
-        cuentaBancaria: {
-          select: {
-            // ✅ TODOS LOS CAMPOS NECESARIOS
-            tipoCuenta: true,
-            nombreBanco: true,
-            nombreTitular: true,
-            clabe: true,
-            numeroRuta: true,
-            numeroCuenta: true,
-            swift: true,
-            emailPaypal: true,
-          },
-        },
-      },
-      orderBy: {
-        fechaSolicitud: "desc",
-      },
-    });
+    // ✅ USAR LA FUNCIÓN CORRECTA: obtenerRetirosUsuario (solo del usuario)
+    const resultado = await obtenerRetirosUsuario(session.userId);
 
-    // 🔧 FIX: Mapear con alertas simuladas (hasta implementar sistema completo)
-    const retirosConAlertas = retiros.map((retiro) => {
-      const alertas = [];
-      
-      // Generar alertas basadas en las reglas de negocio
-      if (retiro.montoSolicitado >= 50000) {
-        alertas.push({
-          id: `alerta-monto-${retiro.id}`,
-          tipo: 'monto_alto',
-          mensaje: 'Monto alto (≥$50,000 USD)',
-          resuelta: false,
-        });
-      }
+    if (!resultado.exito) {
+      return NextResponse.json(
+        { error: resultado.mensaje },
+        { status: 400 }
+      );
+    }
 
-      // Alerta de retiros múltiples (simulada por ahora)
-      if (retiro.requiereRevision) {
-        alertas.push({
-          id: `alerta-revision-${retiro.id}`,
-          tipo: 'revision_especial',
-          mensaje: 'Requiere revisión especial',
-          resuelta: false,
-        });
-      }
-
-      return {
-        ...retiro,
-        alertas,
-      };
-    });
-
-    // Calcular estadísticas
-    const estadisticas = {
-      total: retiros.length,
-      pendientes: retiros.filter((r) => r.estado === "Pendiente").length,
-      procesando: retiros.filter((r) => r.estado === "Procesando").length,
-      completados: retiros.filter((r) => r.estado === "Completado").length,
-      rechazados: retiros.filter((r) => r.estado === "Rechazado").length,
-      conAlertas: retirosConAlertas.filter((r) => r.alertas.length > 0).length,
-    };
-
-    console.log('🔍 [API DEBUG] Retiro de ejemplo con cuenta completa:', {
-      id: retiros[0]?.id,
-      cuentaBancaria: retiros[0]?.cuentaBancaria,
-      usuario: retiros[0]?.usuario.nombreCompleto
-    });
-
+    // ✅ Los datos ya vienen formateados desde el service
     return NextResponse.json({
       success: true,
-      retiros: retirosConAlertas,
-      stats: estadisticas,
+      retiros: resultado.data,
+      mensaje: resultado.mensaje
     });
+
   } catch (error) {
-    console.error("❌ Error en GET /api/admin/retiros:", error);
+    console.error("❌ Error en GET /api/retiros:", error);
     return NextResponse.json(
       { error: "Error interno del servidor" },
       { status: 500 }
