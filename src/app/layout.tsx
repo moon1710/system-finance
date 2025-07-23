@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Creators Wallet",
+  title: "Pagos Backstage Música",
   description: "Desarrolo por mon Caballero",
 };
 

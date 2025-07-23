@@ -17,7 +17,7 @@ export default function LandingPage() {
           }}
         />
         <div className="relative z-10 text-center max-w-4xl mx-auto px-6">
-          <p className="text-sm text-gray-600 mb-8 font-medium">creator's wallet</p>
+          <p className="text-sm text-gray-600 mb-8 font-medium">Backstage Música</p>
           <h1 className="text-5xl text-transform: uppercase md:text-7xl font-bold text-black mb-6 leading-tight">
             El control de tus pagos simplificado.
           </h1>
@@ -141,7 +141,7 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-4 gap-8 mb-12">
             <div className="col-span-2">
               <h3 className="text-2xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-                creator's wallet
+                Backstage Música
               </h3>
               <p className="text-gray-400 leading-relaxed mb-6">
                 La plataforma exclusiva para artistas donde gestionas tus finanzas con total transparencia y seguridad.
@@ -182,7 +182,7 @@ export default function LandingPage() {
 
           <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center">
             <p className="text-gray-400 text-sm mb-4 md:mb-0">
-              © 2024 creator's wallet. Todos los derechos reservados.
+              © 2024 Backstage Música. Todos los derechos reservados.
             </p>
             <div className="flex space-x-6 text-sm text-gray-400">
               <span className="hover:text-white transition-colors cursor-pointer">Términos de Servicio</span>
