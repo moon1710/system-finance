@@ -9,7 +9,6 @@ import { DatosCuentaBancaria, ResultadoValidacion, DireccionCompleta } from '@/l
 
 /**
  * GET /api/cuentas
- * Obtener todas las cuentas bancarias del usuario autenticado
  */
 export async function GET(request: NextRequest) {
   try {
@@ -48,9 +47,9 @@ export async function GET(request: NextRequest) {
     )
   }
 }
+
 /**
- * POST /api/cuentas
- * Crear nueva cuenta bancaria (VERSIÓN COMPLETA)
+ * POST /api/cuentas - VERSIÓN CORREGIDA
  */
 export async function POST(request: NextRequest) {
   try {
@@ -67,13 +66,7 @@ export async function POST(request: NextRequest) {
     const userId = session.userId;
     const body = await request.json();
 
-    console.log('🔍 [API] Datos recibidos:', {
-      tipoCuenta: body.tipoCuenta,
-      nombreTitular: body.nombreTitular,
-      pais: body.pais,
-      tieneDireccionBeneficiario: !!body.direccionBeneficiario,
-      tieneDireccionBanco: !!body.direccionBanco
-    });
+    console.log('🔍 [API] Datos recibidos completos:', body);
 
     // === VALIDACIONES BÁSICAS ===
     if (!body.tipoCuenta || !body.nombreTitular) {
@@ -82,31 +75,37 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // === VALIDACIÓN ESPECÍFICA POR TIPO DE CUENTA ===
-    if (body.tipoCuenta === 'internacional' && !body.pais) {
-      return NextResponse.json({
-        error: 'El país es un campo requerido para cuentas internacionales'
-      }, { status: 400 });
+    // === VALIDACIONES ESPECÍFICAS POR TIPO ===
+    if (body.tipoCuenta === 'nacional') {
+      if (!body.nombreBanco || !body.clabe) {
+        return NextResponse.json({
+          error: 'Para cuentas nacionales se requiere nombre del banco y CLABE'
+        }, { status: 400 });
+      }
     }
 
-    if (body.tipoCuenta === 'nacional' && !body.clabe) {
-      return NextResponse.json({
-        error: 'La CLABE es requerida para cuentas nacionales'
-      }, { status: 400 });
+    if (body.tipoCuenta === 'internacional') {
+      if (!body.nombreBanco || !body.numeroCuenta || !body.swift || !body.pais) {
+        return NextResponse.json({
+          error: 'Para cuentas internacionales se requiere banco, número de cuenta, SWIFT y país'
+        }, { status: 400 });
+      }
     }
 
-    if (body.tipoCuenta === 'paypal' && !body.emailPaypal) {
-      return NextResponse.json({
-        error: 'El email de PayPal es requerido'
-      }, { status: 400 });
+    if (body.tipoCuenta === 'paypal') {
+      if (!body.emailPaypal) {
+        return NextResponse.json({
+          error: 'Para cuentas PayPal se requiere el email'
+        }, { status: 400 });
+      }
     }
 
     // === PROCESAR DIRECCIONES ===
-    let direccionBeneficiario: DireccionCompleta | undefined;
-    let direccionBanco: DireccionCompleta | undefined;
+    let direccionBeneficiarioData = null;
+    let direccionBancoData = null;
 
-    if (body.direccionBeneficiario) {
-      direccionBeneficiario = {
+    if (body.direccionBeneficiario && Object.values(body.direccionBeneficiario).some(v => v && v.trim())) {
+      direccionBeneficiarioData = {
         direccion: body.direccionBeneficiario.direccion || '',
         ciudad: body.direccionBeneficiario.ciudad || '',
         estado: body.direccionBeneficiario.estado || '',
@@ -115,8 +114,8 @@ export async function POST(request: NextRequest) {
       };
     }
 
-    if (body.direccionBanco) {
-      direccionBanco = {
+    if (body.direccionBanco && Object.values(body.direccionBanco).some(v => v && v.trim())) {
+      direccionBancoData = {
         direccion: body.direccionBanco.direccion || '',
         ciudad: body.direccionBanco.ciudad || '',
         estado: body.direccionBanco.estado || '',
@@ -125,43 +124,42 @@ export async function POST(request: NextRequest) {
       };
     }
 
-    // === CREAR LA CUENTA CON TODOS LOS CAMPOS ===
-    const resultado = await crearCuentaBancaria(userId, body.tipoCuenta, {
+    // === PREPARAR DATOS PARA EL SERVICIO ===
+    const datosCuenta = {
       tipoCuenta: body.tipoCuenta,
       nombreTitular: body.nombreTitular,
-      nombreBanco: body.nombreBanco,
-      esPredeterminada: body.esPredeterminada,
+      esPredeterminada: body.esPredeterminada || false,
       
-      // === CUENTAS NACIONALES ===
-      clabe: body.clabe,
-      tipoCuentaNacional: body.tipoCuentaNacional,
+      // Campos específicos por tipo
+      nombreBanco: body.nombreBanco || null,
+      clabe: body.clabe || null,
+      tipoCuentaNacional: body.tipoCuentaNacional || null,
+      numeroCuenta: body.numeroCuenta || null,
+      swift: body.swift || null,
+      codigoABA: body.codigoABA || null,
+      tipoCuentaInternacional: body.tipoCuentaInternacional || null,
+      pais: body.pais || null,
+      emailPaypal: body.emailPaypal || null,
       
-      // === CUENTAS INTERNACIONALES ===
-      numeroCuenta: body.numeroCuenta,
-      swift: body.swift,
-      codigoABA: body.codigoABA,
-      tipoCuentaInternacional: body.tipoCuentaInternacional,
-      pais: body.pais,
-      
-      // === DIRECCIONES ===
-      direccionBeneficiario,
-      direccionBanco,
-      
-      // === PAYPAL ===
-      emailPaypal: body.emailPaypal,
-    });
+      // Direcciones
+      direccionBeneficiario: direccionBeneficiarioData,
+      direccionBanco: direccionBancoData
+    };
+
+    console.log('🔍 [API] Datos preparados para servicio:', datosCuenta);
+
+    // === CREAR LA CUENTA ===
+    const resultado = await crearCuentaBancaria(userId, body.tipoCuenta, datosCuenta);
 
     if (!resultado.exito) {
+      console.error('❌ [API] Error del servicio:', resultado.mensaje, resultado.errores);
       return NextResponse.json({ 
         error: resultado.mensaje, 
         errores: resultado.errores 
       }, { status: 400 });
     }
 
-    console.log('✅ [API] Cuenta creada exitosamente:', {
-      id: resultado.data?.id,
-      tipoCuenta: resultado.data?.tipoCuenta
-    });
+    console.log('✅ [API] Cuenta creada exitosamente:', resultado.data?.id);
 
     return NextResponse.json({
       success: true,
@@ -169,10 +167,11 @@ export async function POST(request: NextRequest) {
       cuenta: resultado.data
     }, { status: 201 });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ [API ERROR] Error en POST /api/cuentas:', error);
     return NextResponse.json({ 
-      error: 'Error interno del servidor' 
+      error: 'Error interno del servidor',
+      details: error.message 
     }, { status: 500 });
   }
 }

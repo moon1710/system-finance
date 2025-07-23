@@ -1,13 +1,10 @@
-// /lib/services/account.ts
-// 🔧 VERSIÓN COMPLETA: Con todos los campos nuevos
-
+// /lib/services/account.ts - VERSIÓN CORREGIDA FINAL
 import { prisma } from "@/lib/db";
 import {
   validarCuentaNacional,
   validarCuentaInternacional,
   validarCuentaPayPal,
-  type DatosCuentaBancaria,
-  type DireccionCompleta
+  type DatosCuentaBancaria
 } from "@/lib/validations/account";
 
 export interface ResultadoOperacion<T = any> {
@@ -17,34 +14,39 @@ export interface ResultadoOperacion<T = any> {
   errores?: string[];
 }
 
-// 🔧 INTERFAZ COMPLETA ACTUALIZADA
+// Interfaz para direcciones
+interface DireccionCompleta {
+  direccion: string;
+  ciudad: string;
+  estado: string;
+  codigoPostal: string;
+  pais: string;
+}
+
+// Interfaz COMPLETA para datos de cuenta
 export interface DatosCuenta {
-  tipoCuenta: 'nacional' | 'internacional' | 'paypal';
+  tipoCuenta?: 'nacional' | 'internacional' | 'paypal';
   nombreTitular: string;
-  nombreBanco?: string;
   esPredeterminada?: boolean;
   
-  // === CUENTAS NACIONALES ===
-  clabe?: string;
-  tipoCuentaNacional?: 'cheques' | 'ahorros';
+  // Campos opcionales según el tipo
+  nombreBanco?: string | null;
+  clabe?: string | null;
+  tipoCuentaNacional?: string | null;
+  numeroCuenta?: string | null;
+  swift?: string | null;
+  codigoABA?: string | null;
+  tipoCuentaInternacional?: string | null;
+  pais?: string | null;
+  emailPaypal?: string | null;
   
-  // === CUENTAS INTERNACIONALES ===
-  numeroCuenta?: string;
-  swift?: string;
-  codigoABA?: string;
-  tipoCuentaInternacional?: 'checking' | 'savings';
-  pais?: string;
-  
-  // === DIRECCIONES ===
-  direccionBeneficiario?: DireccionCompleta;
-  direccionBanco?: DireccionCompleta;
-  
-  // === PAYPAL ===
-  emailPaypal?: string;
+  // Direcciones
+  direccionBeneficiario?: DireccionCompleta | null;
+  direccionBanco?: DireccionCompleta | null;
 }
 
 /**
- * Crear nueva cuenta bancaria (VERSIÓN COMPLETA)
+ * Crear nueva cuenta bancaria - VERSIÓN CORREGIDA
  */
 export async function crearCuentaBancaria(
   userId: string,
@@ -52,12 +54,12 @@ export async function crearCuentaBancaria(
   datos: DatosCuenta
 ): Promise<ResultadoOperacion> {
   try {
-    console.log('🔍 [SERVICE] Creando cuenta completa con datos:', {
+    console.log('🔍 [SERVICE] Creando cuenta con datos:', {
       tipoCuenta,
       nombreTitular: datos.nombreTitular,
       pais: datos.pais,
-      tieneDireccionBeneficiario: !!datos.direccionBeneficiario,
-      tieneDireccionBanco: !!datos.direccionBanco
+      tieneDirBeneficiario: !!datos.direccionBeneficiario,
+      tieneDirBanco: !!datos.direccionBanco
     });
 
     // 🔧 VALIDAR SEGÚN TIPO DE CUENTA
@@ -65,42 +67,50 @@ export async function crearCuentaBancaria(
     
     switch (tipoCuenta) {
       case 'nacional':
+        if (!datos.nombreBanco || !datos.clabe) {
+          return {
+            exito: false,
+            mensaje: 'Faltan datos requeridos para cuenta nacional',
+            errores: ['Se requiere nombre del banco y CLABE']
+          };
+        }
+        
         validacionResultado = validarCuentaNacional({
-          tipoCuenta: 'nacional',
-          nombreBanco: datos.nombreBanco || '',
-          clabe: datos.clabe || '',
-          nombreTitular: datos.nombreTitular,
-          tipoCuentaNacional: datos.tipoCuentaNacional
+          nombreBanco: datos.nombreBanco,
+          clabe: datos.clabe,
+          nombreTitular: datos.nombreTitular
         });
         break;
         
       case 'internacional':
-        if (!datos.pais || datos.pais.trim().length === 0) {
+        if (!datos.pais || !datos.nombreBanco || !datos.numeroCuenta || !datos.swift) {
           return {
             exito: false,
-            mensaje: 'El país es requerido para cuentas internacionales',
-            errores: ['pais: Campo requerido']
+            mensaje: 'Faltan datos requeridos para cuenta internacional',
+            errores: ['Se requiere país, banco, número de cuenta y SWIFT']
           };
         }
         
-        validacionResultado = validarCuentaInternacional({
-          tipoCuenta: 'internacional',
-          nombreBanco: datos.nombreBanco || '',
-          numeroCuenta: datos.numeroCuenta || '',
-          swift: datos.swift || '',
-          nombreTitular: datos.nombreTitular,
-          pais: datos.pais,
-          codigoABA: datos.codigoABA,
-          tipoCuentaInternacional: datos.tipoCuentaInternacional,
-          direccionBeneficiario: datos.direccionBeneficiario,
-          direccionBanco: datos.direccionBanco
-        });
+validacionResultado = validarCuentaInternacional({
+  nombreBanco: datos.nombreBanco,
+  numeroCuenta: datos.numeroCuenta,
+  swift: datos.swift,
+  nombreTitular: datos.nombreTitular,
+  pais: datos.pais
+});
         break;
         
       case 'paypal':
+        if (!datos.emailPaypal) {
+          return {
+            exito: false,
+            mensaje: 'Falta email de PayPal',
+            errores: ['Se requiere email de PayPal']
+          };
+        }
+        
         validacionResultado = validarCuentaPayPal({
-          tipoCuenta: 'paypal',
-          emailPaypal: datos.emailPaypal || '',
+          emailPaypal: datos.emailPaypal,
           nombreTitular: datos.nombreTitular
         });
         break;
@@ -117,7 +127,7 @@ export async function crearCuentaBancaria(
       return validacionResultado;
     }
 
-    // 🔧 VERIFICAR SI ES LA PRIMERA CUENTA (será predeterminada)
+    // 🔧 VERIFICAR SI ES LA PRIMERA CUENTA
     const cuentasExistentes = await prisma.cuentaBancaria.count({
       where: { userId }
     });
@@ -132,50 +142,52 @@ export async function crearCuentaBancaria(
       });
     }
 
-    // 🔧 CREAR LA CUENTA CON TODOS LOS CAMPOS NUEVOS
+    // 🔧 PREPARAR DATOS PARA PRISMA
+    const datosParaPrisma: any = {
+      userId,
+      tipoCuenta,
+      nombreTitular: datos.nombreTitular,
+      esPredeterminada: datos.esPredeterminada || esPrimeraCuenta,
+      
+      // Campos básicos (siempre incluir, aunque sean null)
+      nombreBanco: datos.nombreBanco,
+      clabe: datos.clabe,
+      tipoCuentaNacional: datos.tipoCuentaNacional,
+      numeroCuenta: datos.numeroCuenta,
+      swift: datos.swift,
+      codigoABA: datos.codigoABA,
+      tipoCuentaInternacional: datos.tipoCuentaInternacional,
+      pais: datos.pais,
+      emailPaypal: datos.emailPaypal,
+    };
+
+    // Agregar direcciones solo si existen
+    if (datos.direccionBeneficiario) {
+      datosParaPrisma.direccionBeneficiario = datos.direccionBeneficiario.direccion;
+      datosParaPrisma.ciudadBeneficiario = datos.direccionBeneficiario.ciudad;
+      datosParaPrisma.estadoBeneficiario = datos.direccionBeneficiario.estado;
+      datosParaPrisma.codigoPostalBeneficiario = datos.direccionBeneficiario.codigoPostal;
+      datosParaPrisma.paisBeneficiario = datos.direccionBeneficiario.pais;
+    }
+
+    if (datos.direccionBanco) {
+      datosParaPrisma.direccionBanco = datos.direccionBanco.direccion;
+      datosParaPrisma.ciudadBanco = datos.direccionBanco.ciudad;
+      datosParaPrisma.estadoBanco = datos.direccionBanco.estado;
+      datosParaPrisma.codigoPostalBanco = datos.direccionBanco.codigoPostal;
+      datosParaPrisma.paisBanco = datos.direccionBanco.pais;
+    }
+
+    console.log('🔍 [SERVICE] Datos para Prisma:', datosParaPrisma);
+
+    // 🔧 CREAR LA CUENTA
     const nuevaCuenta = await prisma.cuentaBancaria.create({
-      data: {
-        userId,
-        tipoCuenta,
-        nombreTitular: datos.nombreTitular,
-        nombreBanco: datos.nombreBanco,
-        esPredeterminada: datos.esPredeterminada || esPrimeraCuenta,
-        
-        // === CUENTAS NACIONALES ===
-        clabe: datos.clabe,
-        tipoCuentaNacional: datos.tipoCuentaNacional,
-        
-        // === CUENTAS INTERNACIONALES ===
-        numeroCuenta: datos.numeroCuenta,
-        swift: datos.swift,
-        codigoABA: datos.codigoABA,
-        tipoCuentaInternacional: datos.tipoCuentaInternacional,
-        pais: datos.pais,
-        
-        // === DIRECCIONES DEL BENEFICIARIO ===
-        direccionBeneficiario: datos.direccionBeneficiario?.direccion,
-        ciudadBeneficiario: datos.direccionBeneficiario?.ciudad,
-        estadoBeneficiario: datos.direccionBeneficiario?.estado,
-        codigoPostalBeneficiario: datos.direccionBeneficiario?.codigoPostal,
-        paisBeneficiario: datos.direccionBeneficiario?.pais,
-        
-        // === DIRECCIONES DEL BANCO ===
-        direccionBanco: datos.direccionBanco?.direccion,
-        ciudadBanco: datos.direccionBanco?.ciudad,
-        estadoBanco: datos.direccionBanco?.estado,
-        codigoPostalBanco: datos.direccionBanco?.codigoPostal,
-        paisBanco: datos.direccionBanco?.pais,
-        
-        // === PAYPAL ===
-        emailPaypal: datos.emailPaypal,
-      }
+      data: datosParaPrisma
     });
 
-    console.log('✅ [SERVICE] Cuenta completa creada exitosamente:', {
+    console.log('✅ [SERVICE] Cuenta creada exitosamente:', {
       id: nuevaCuenta.id,
-      tipoCuenta: nuevaCuenta.tipoCuenta,
-      pais: nuevaCuenta.pais,
-      tieneDirecciones: !!(nuevaCuenta.direccionBeneficiario || nuevaCuenta.direccionBanco)
+      tipoCuenta: nuevaCuenta.tipoCuenta
     });
 
     return {
@@ -185,15 +197,25 @@ export async function crearCuentaBancaria(
     };
 
   } catch (error: any) {
-    console.error('❌ [SERVICE ERROR] Error creando cuenta completa:', error);
+    console.error('❌ [SERVICE ERROR] Error creando cuenta:', error);
 
     // 🔧 MANEJAR ERRORES DE UNICIDAD
     if (error.code === 'P2002') {
-      const field = error.meta?.target?.[1] || 'cuenta';
+      const constraint = error.meta?.target || ['campo desconocido'];
+      let mensaje = 'Ya existe una cuenta con estos datos';
+      
+      if (constraint.includes('clabe')) {
+        mensaje = 'Ya existe una cuenta con esta CLABE';
+      } else if (constraint.includes('email_paypal')) {
+        mensaje = 'Ya existe una cuenta con este email de PayPal';
+      } else if (constraint.includes('numero_cuenta')) {
+        mensaje = 'Ya existe una cuenta con este número de cuenta';
+      }
+      
       return {
         exito: false,
-        mensaje: `Ya existe una cuenta con este ${field}`,
-        errores: [`${field}: Ya está registrado`]
+        mensaje,
+        errores: [mensaje]
       };
     }
 
@@ -206,170 +228,7 @@ export async function crearCuentaBancaria(
 }
 
 /**
- * Actualizar cuenta bancaria existente (VERSIÓN COMPLETA)
- */
-export async function actualizarCuentaBancaria(
-  cuentaId: string,
-  datos: DatosCuenta
-): Promise<ResultadoOperacion> {
-  try {
-    console.log('🔍 [SERVICE] Actualizando cuenta completa:', {
-      cuentaId,
-      tipoCuenta: datos.tipoCuenta,
-      pais: datos.pais
-    });
-
-    // 🔧 VALIDAR SEGÚN TIPO DE CUENTA (igual que en crear)
-    let validacionResultado;
-    
-    switch (datos.tipoCuenta) {
-      case 'nacional':
-        validacionResultado = validarCuentaNacional({
-          tipoCuenta: 'nacional',
-          nombreBanco: datos.nombreBanco || '',
-          clabe: datos.clabe || '',
-          nombreTitular: datos.nombreTitular,
-          tipoCuentaNacional: datos.tipoCuentaNacional
-        });
-        break;
-        
-      case 'internacional':
-        if (!datos.pais || datos.pais.trim().length === 0) {
-          return {
-            exito: false,
-            mensaje: 'El país es requerido para cuentas internacionales',
-            errores: ['pais: Campo requerido']
-          };
-        }
-        
-        validacionResultado = validarCuentaInternacional({
-          tipoCuenta: 'internacional',
-          nombreBanco: datos.nombreBanco || '',
-          numeroCuenta: datos.numeroCuenta || '',
-          swift: datos.swift || '',
-          nombreTitular: datos.nombreTitular,
-          pais: datos.pais,
-          codigoABA: datos.codigoABA,
-          tipoCuentaInternacional: datos.tipoCuentaInternacional,
-          direccionBeneficiario: datos.direccionBeneficiario,
-          direccionBanco: datos.direccionBanco
-        });
-        break;
-        
-      case 'paypal':
-        validacionResultado = validarCuentaPayPal({
-          tipoCuenta: 'paypal',
-          emailPaypal: datos.emailPaypal || '',
-          nombreTitular: datos.nombreTitular
-        });
-        break;
-        
-      default:
-        return {
-          exito: false,
-          mensaje: 'Tipo de cuenta no válido'
-        };
-    }
-
-    if (!validacionResultado.exito) {
-      return validacionResultado;
-    }
-
-    // 🔧 VERIFICAR QUE LA CUENTA EXISTE
-    const cuentaExistente = await prisma.cuentaBancaria.findUnique({
-      where: { id: cuentaId }
-    });
-
-    if (!cuentaExistente) {
-      return {
-        exito: false,
-        mensaje: 'Cuenta bancaria no encontrada'
-      };
-    }
-
-    // 🔧 SI QUIERE SER PREDETERMINADA, DESACTIVAR LAS DEMÁS
-    if (datos.esPredeterminada) {
-      await prisma.cuentaBancaria.updateMany({
-        where: {
-          userId: cuentaExistente.userId,
-          id: { not: cuentaId }
-        },
-        data: { esPredeterminada: false }
-      });
-    }
-
-    // 🔧 ACTUALIZAR LA CUENTA CON TODOS LOS CAMPOS NUEVOS
-    const cuentaActualizada = await prisma.cuentaBancaria.update({
-      where: { id: cuentaId },
-      data: {
-        tipoCuenta: datos.tipoCuenta,
-        nombreTitular: datos.nombreTitular,
-        nombreBanco: datos.nombreBanco,
-        esPredeterminada: datos.esPredeterminada,
-        
-        // === CUENTAS NACIONALES ===
-        clabe: datos.clabe,
-        tipoCuentaNacional: datos.tipoCuentaNacional,
-        
-        // === CUENTAS INTERNACIONALES ===
-        numeroCuenta: datos.numeroCuenta,
-        swift: datos.swift,
-        codigoABA: datos.codigoABA,
-        tipoCuentaInternacional: datos.tipoCuentaInternacional,
-        pais: datos.pais,
-        
-        // === DIRECCIONES DEL BENEFICIARIO ===
-        direccionBeneficiario: datos.direccionBeneficiario?.direccion || null,
-        ciudadBeneficiario: datos.direccionBeneficiario?.ciudad || null,
-        estadoBeneficiario: datos.direccionBeneficiario?.estado || null,
-        codigoPostalBeneficiario: datos.direccionBeneficiario?.codigoPostal || null,
-        paisBeneficiario: datos.direccionBeneficiario?.pais || null,
-        
-        // === DIRECCIONES DEL BANCO ===
-        direccionBanco: datos.direccionBanco?.direccion || null,
-        ciudadBanco: datos.direccionBanco?.ciudad || null,
-        estadoBanco: datos.direccionBanco?.estado || null,
-        codigoPostalBanco: datos.direccionBanco?.codigoPostal || null,
-        paisBanco: datos.direccionBanco?.pais || null,
-        
-        // === PAYPAL ===
-        emailPaypal: datos.emailPaypal,
-      }
-    });
-
-    console.log('✅ [SERVICE] Cuenta completa actualizada exitosamente:', {
-      id: cuentaActualizada.id,
-      tipoCuenta: cuentaActualizada.tipoCuenta
-    });
-
-    return {
-      exito: true,
-      mensaje: 'Cuenta bancaria actualizada exitosamente',
-      data: cuentaActualizada
-    };
-
-  } catch (error: any) {
-    console.error('❌ [SERVICE ERROR] Error actualizando cuenta completa:', error);
-
-    if (error.code === 'P2002') {
-      const field = error.meta?.target?.[1] || 'cuenta';
-      return {
-        exito: false,
-        mensaje: `Ya existe una cuenta con este ${field}`,
-        errores: [`${field}: Ya está registrado`]
-      };
-    }
-
-    return {
-      exito: false,
-      mensaje: 'Error al actualizar la cuenta bancaria',
-      errores: [error.message || 'Error desconocido']
-    };
-  }
-}
-
-/**
- * Obtener cuentas bancarias de un usuario (sin cambios - compatible)
+ * Obtener cuentas bancarias de un usuario (sin cambios)
  */
 export async function obtenerCuentasPorUsuario(userId: string): Promise<ResultadoOperacion> {
   try {
@@ -441,8 +300,6 @@ export async function eliminarCuentaBancaria(cuentaId: string): Promise<Resultad
       }
     }
 
-    console.log('✅ [SERVICE] Cuenta eliminada:', cuentaId);
-
     return {
       exito: true,
       mensaje: 'Cuenta bancaria eliminada exitosamente'
@@ -475,8 +332,6 @@ export async function establecerCuentaPredeterminada(
       where: { id: cuentaId },
       data: { esPredeterminada: true }
     });
-
-    console.log('✅ [SERVICE] Cuenta predeterminada establecida:', cuentaId);
 
     return {
       exito: true,

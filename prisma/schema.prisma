@@ -29,57 +29,52 @@ model Usuario {
 }
 
 model CuentaBancaria {
-  id                String    @id @default(uuid())
-  userId            String    @map("usuario_id")
-  tipoCuenta        String    @map("tipo_cuenta") // 'nacional', 'internacional', 'paypal'
-  
-  // === CAMPOS BANCARIOS BÁSICOS ===
-  nombreBanco       String?   @map("nombre_banco")
-  nombreTitular     String    @map("nombre_titular")
-  esPredeterminada  Boolean   @default(false) @map("es_predeterminada")
-  
-  // === CUENTAS NACIONALES (México) ===
-  clabe             String?
-  tipoCuentaNacional String?  @map("tipo_cuenta_nacional") // 'cheques', 'ahorros'
-  
-  // === CUENTAS INTERNACIONALES ===
-  numeroRuta        String?   @map("numero_ruta")
-  numeroCuenta      String?   @map("numero_cuenta") // También IBAN
-  swift             String?
-  codigoABA         String?   @map("codigo_aba") // Para bancos USA
-  tipoCuentaInternacional String? @map("tipo_cuenta_internacional") // 'checking', 'savings'
-  pais              String?   // País del titular
-  
-  // === DIRECCIÓN DEL BENEFICIARIO (AML/KYC) ===
-  direccionBeneficiario     String? @map("direccion_beneficiario") @db.Text
-  ciudadBeneficiario        String? @map("ciudad_beneficiario")
-  estadoBeneficiario        String? @map("estado_beneficiario")
-  codigoPostalBeneficiario  String? @map("codigo_postal_beneficiario")
-  paisBeneficiario          String? @map("pais_beneficiario")
-  
-  // === DIRECCIÓN DEL BANCO ===
-  direccionBanco            String? @map("direccion_banco") @db.Text
-  ciudadBanco               String? @map("ciudad_banco")
-  estadoBanco               String? @map("estado_banco")
-  codigoPostalBanco         String? @map("codigo_postal_banco")
-  paisBanco                 String? @map("pais_banco")
-  
-  // === PAYPAL ===
-  emailPaypal       String?   @map("email_paypal")
-  
-  // === METADATOS ===
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  id                      String    @id @default(cuid())
+  userId                  String    @map("usuario_id") // Mapea 'userId' a 'usuario_id' en la DB
+  tipoCuenta              String    @map("tipo_cuenta")
+  nombreTitular           String    @map("nombre_titular")
+  esPredeterminada        Boolean   @default(false) @map("es_predeterminada")
 
-  // === RELACIONES ===
-  usuario           Usuario   @relation(fields: [userId], references: [id])
-  retiros           Retiro[]
+  // Campos específicos por tipo de cuenta
+  nombreBanco             String?   @map("nombre_banco")
+  clabe                   String?   @map("clabe")
+  tipoCuentaNacional      String?   @map("tipo_cuenta_nacional")
+  numeroCuenta            String?   @map("numero_cuenta")
+  swift                   String?   @map("swift")
+  codigoABA               String?   @map("codigo_aba") // Mapea 'codigoABA' a 'codigo_aba' en la DB
+  // Nota: 'numero_ruta' existe en tu DB pero no se usa en tu código actual.
+  // Si necesitas usarlo, añade 'numeroRuta String? @map("numero_ruta")'
+  tipoCuentaInternacional String?   @map("tipo_cuenta_internacional")
+  pais                    String?   @map("pais")
+  emailPaypal             String?   @map("email_paypal")
 
-  // === ÍNDICES ÚNICOS ===
-  @@unique([userId, clabe])
-  @@unique([userId, numeroRuta, numeroCuenta])
-  @@unique([userId, emailPaypal])
-  @@map("cuentas_bancarias")
+  // Campos de dirección del beneficiario (asegurando que el mapeo sea explícito)
+  direccionBeneficiario   String?   @map("direccion_beneficiario")
+  ciudadBeneficiario      String?   @map("ciudad_beneficiario")
+  estadoBeneficiario      String?   @map("estado_beneficiario")
+  codigoPostalBeneficiario String?  @map("codigo_postal_beneficiario")
+  paisBeneficiario        String?   @map("pais_beneficiario")
+
+  // **CAMPOS DE DIRECCIÓN DEL BANCO QUE NECESITAN EL MAPEO EXPLÍCITO**
+  direccionBanco          String?   @map("direccion_banco")
+  ciudadBanco             String?   @map("ciudad_banco")
+  estadoBanco             String?   @map("estado_banco")
+  codigoPostalBanco       String?   @map("codigo_postal_banco")
+  paisBanco               String?   @map("pais_banco")
+
+  createdAt               DateTime  @default(now()) @map("createdAt")
+  updatedAt               DateTime  @updatedAt @map("updatedAt")
+
+  user                    Usuario      @relation(fields: [userId], references: [id])
+  retiros                 Retiro[]
+
+  // Índices únicos (si los tienes definidos en tu DB o los necesitas)
+  @@unique([clabe], name: "unique_clabe")
+  @@unique([emailPaypal], name: "unique_email_paypal")
+  @@unique([numeroCuenta, swift, pais], name: "unique_international_account")
+
+  // **Mapeo del nombre de la tabla**
+  @@map("cuentas_bancarias") // Mapea el modelo 'CuentaBancaria' a la tabla 'cuentas_bancarias'
 }
 
 model Retiro {
