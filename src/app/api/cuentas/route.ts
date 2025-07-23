@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getIronSession } from 'iron-session'
 import { sessionOptions, SessionData } from '@/lib/session'
-import { crearCuentaBancaria, obtenerCuentasPorUsuario } from '@/lib/services/account'
+import { crearCuentaBancaria, obtenerCuentasPorUsuario, actualizarCuentaBancaria} from '@/lib/services/account'
 import { DatosCuentaBancaria, ResultadoValidacion, DireccionCompleta } from '@/lib/validations/account'
 
 

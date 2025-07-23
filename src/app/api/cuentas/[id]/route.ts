@@ -4,7 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getIronSession } from 'iron-session'
 import { sessionOptions, SessionData } from '@/lib/session'
-import { actualizarCuentaBancaria, eliminarCuentaBancaria } from '@/lib/services/account'
+import { actualizarCuentaBancaria, eliminarCuentaBancaria, establecerCuentaPredeterminada} from '@/lib/services/account'
 import { DatosCuentaBancaria, ResultadoValidacion, DireccionCompleta } from '@/lib/validations/account'
 import { prisma } from '@/lib/db'
 
@@ -20,8 +20,9 @@ interface RouteParams {
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const session = await getIronSession<SessionData>(request, new NextResponse(), sessionOptions)
 
@@ -36,7 +37,7 @@ export async function PUT(
     // === VERIFICAR QUE LA CUENTA PERTENECE AL USUARIO ===
     const cuentaExistente = await prisma.cuentaBancaria.findFirst({
       where: {
-        id: params.id,
+        id: id,
         userId: session.userId
       }
     });
@@ -50,7 +51,7 @@ export async function PUT(
     const body = await request.json();
 
     console.log('🔍 [API] Actualizando cuenta con datos:', {
-      id: params.id,
+      id: id,
       tipoCuenta: body.tipoCuenta,
       nombreTitular: body.nombreTitular,
       pais: body.pais
@@ -107,7 +108,7 @@ export async function PUT(
     }
 
     // === ACTUALIZAR LA CUENTA CON TODOS LOS CAMPOS ===
-    const resultado = await actualizarCuentaBancaria(params.id, {
+    const resultado = await actualizarCuentaBancaria(id, {
       tipoCuenta: body.tipoCuenta,
       nombreTitular: body.nombreTitular,
       nombreBanco: body.nombreBanco,
@@ -140,7 +141,7 @@ export async function PUT(
     }
 
     console.log('✅ [API] Cuenta actualizada exitosamente:', {
-      id: params.id,
+      id: id,
       tipoCuenta: resultado.data?.tipoCuenta
     });
 
@@ -179,7 +180,7 @@ export async function DELETE(
     // === VERIFICAR QUE LA CUENTA PERTENECE AL USUARIO ===
     const cuentaExistente = await prisma.cuentaBancaria.findFirst({
       where: {
-        id: params.id,
+        id: id,
         userId: session.userId
       }
     });
@@ -190,7 +191,7 @@ export async function DELETE(
       }, { status: 404 });
     }
 
-    const resultado = await eliminarCuentaBancaria(params.id);
+    const resultado = await eliminarCuentaBancaria(id);
 
     if (!resultado.exito) {
       return NextResponse.json({
@@ -198,7 +199,7 @@ export async function DELETE(
       }, { status: 400 });
     }
 
-    console.log('✅ [API] Cuenta eliminada exitosamente:', params.id);
+    console.log('✅ [API] Cuenta eliminada exitosamente:', id);
 
     return NextResponse.json({
       success: true,
@@ -234,7 +235,7 @@ export async function GET(
 
     const cuenta = await prisma.cuentaBancaria.findFirst({
       where: {
-        id: params.id,
+        id: id,
         userId: session.userId
       }
     })
