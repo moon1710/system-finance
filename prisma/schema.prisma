@@ -1,0 +1,126 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id                     String                 @id @default(uuid())
+  nombreCompleto         String                 @map("nombre_completo")
+  email                  String                 @unique
+  passwordHash           String                 @map("password_hash")
+  rol                    String
+  estadoCuenta           String                 @default("Activa") @map("estado_cuenta")
+  requiereCambioPassword Boolean                @default(false) @map("requiere_cambio_password")
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+  artistasGestionados    AdminArtistaRelacion[] @relation("Admin")
+  adminAsignado          AdminArtistaRelacion[] @relation("Artista")
+  cuentasBancarias       CuentaBancaria[]
+  notasEscritas          NotaUsuario[]          @relation("NotasAdmin")
+  notasRecibidas         NotaUsuario[]          @relation("NotasArtista")
+  retiros                Retiro[]
+  tokensRecuperacion     TokenRecuperacion[]
+
+  @@map("usuarios")
+}
+
+model CuentaBancaria {
+  id               String   @id @default(uuid())
+  userId           String   @map("usuario_id")
+  tipoCuenta       String   @map("tipo_cuenta")
+  nombreBanco      String?  @map("nombre_banco")
+  clabe            String?
+  numeroRuta       String?  @map("numero_ruta")
+  numeroCuenta     String?  @map("numero_cuenta")
+  swift            String?
+  emailPaypal      String?  @map("email_paypal")
+  nombreTitular    String   @map("nombre_titular")
+  esPredeterminada Boolean  @default(false) @map("es_predeterminada")
+  pais              String?   // Solo para cuentas internacionales
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  usuario          Usuario  @relation(fields: [userId], references: [id])
+  retiros          Retiro[]
+
+  @@unique([userId, clabe], name: "CuentaBancaria_userId_clabe_key")
+  @@unique([userId, numeroRuta, numeroCuenta], name: "CuentaBancaria_userId_numeroRuta_numeroCuenta_key")
+  @@unique([userId, emailPaypal], name: "CuentaBancaria_userId_emailPaypal_key")
+  @@map("cuentas_bancarias")
+}
+
+model Retiro {
+  id                  String   @id @default(uuid())
+  usuarioId           String   @map("usuario_id")
+  cuentaBancariaId    String   @map("cuenta_bancaria_id")
+  montoSolicitado     Decimal  @db.Decimal(10, 2) @map("monto_solicitado")
+  estado              String   @default("Pendiente")
+  urlComprobante      String?  @map("url_comprobante") @db.Text
+  notasAdmin          String?  @map("notas_admin") @db.Text
+  // requireRevision es obsoleto, se gestionará con el modelo Alerta
+  // requiereRevision    Boolean  @default(false) @map("requiere_revision")
+  fechaSolicitud      DateTime @default(now()) @map("fecha_solicitud")
+  fechaActualizacion  DateTime @updatedAt @map("fecha_actualizacion")
+
+  usuario        Usuario        @relation(fields: [usuarioId], references: [id])
+  cuentaBancaria CuentaBancaria @relation(fields: [cuentaBancariaId], references: [id])
+  alertas        Alerta[]       // Nueva relación
+
+  @@map("retiros")
+}
+
+// NUEVO MODELO
+model Alerta {
+  id        String   @id @default(uuid())
+  retiroId  String   @map("retiro_id")
+  tipo      String   // 'MONTO_ALTO', 'RETIROS_MULTIPLES', 'PATRON_SOSPECHOSO', 'MANUAL'
+  mensaje   String   @db.Text
+  resuelta  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  retiro Retiro @relation(fields: [retiroId], references: [id])
+
+  @@map("alertas")
+}
+
+model AdminArtistaRelacion {
+  adminId   String  @map("admin_id")
+  artistaId String  @map("artista_id")
+  admin     Usuario @relation("Admin", fields: [adminId], references: [id])
+  artista   Usuario @relation("Artista", fields: [artistaId], references: [id])
+
+  @@id([adminId, artistaId])
+  @@index([artistaId], map: "admin_artista_relacion_artista_id_fkey")
+  @@map("admin_artista_relacion")
+}
+
+model NotaUsuario {
+  id        String   @id @default(uuid())
+  usuarioId String   @map("usuario_id")
+  adminId   String   @map("admin_id")
+  nota      String   @db.Text
+  createdAt DateTime @default(now())
+  admin     Usuario  @relation("NotasAdmin", fields: [adminId], references: [id])
+  usuario   Usuario  @relation("NotasArtista", fields: [usuarioId], references: [id])
+
+  @@index([adminId], map: "notas_usuario_admin_id_fkey")
+  @@index([usuarioId], map: "notas_usuario_usuario_id_fkey")
+  @@map("notas_usuario")
+}
+
+model TokenRecuperacion {
+  id              String   @id @default(uuid())
+  usuarioId       String   @map("usuario_id")
+  token           String   @unique
+  fechaExpiracion DateTime @map("fecha_expiracion")
+  usado           Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  usuario         Usuario  @relation(fields: [usuarioId], references: [id])
+
+  @@index([usuarioId], map: "tokens_recuperacion_usuario_id_fkey")
+  @@map("tokens_recuperacion")
+}
