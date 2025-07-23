@@ -48,7 +48,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     // Establecer como predeterminada
-    const resultado = await establecerCuentaPredeterminada(id, userId)
+    const resultado = await establecerCuentaPredeterminada(userId, id)
 
     if (!resultado.exito) {
       return NextResponse.json(

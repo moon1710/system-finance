@@ -164,10 +164,12 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getIronSession<SessionData>(request, new NextResponse(), sessionOptions)
+    const { id } = await params;  // ✅ Await params
+    
+    const session = await getIronSession<SessionData>(request, new NextResponse(), sessionOptions);
 
     if (!session.isLoggedIn || !session.userId) {
       return NextResponse.json({ error: 'Usuario no autenticado' }, { status: 401 });
