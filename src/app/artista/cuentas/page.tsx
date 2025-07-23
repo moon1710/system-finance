@@ -51,6 +51,16 @@ const formatInfo = (c: CuentaBancaria) => {
     return `${c.nombreBanco || ''} ****${number.slice(-4)}`;
 }
 
+// También necesitas agregar esta función helper si no la tienes:
+const formatTipoCuenta = (tipo) => {
+    switch (tipo) {
+        case 'nacional': return 'Nacional';
+        case 'internacional': return 'Internacional';
+        case 'paypal': return 'PayPal';
+        default: return tipo;
+    }
+}
+
 const getIconForType = (type: CuentaBancaria['tipoCuenta']) => {
     switch (type) {
         case 'nacional': return <MapPin className="w-5 h-5" />;
@@ -375,7 +385,116 @@ export default function CuentasDashboardResponsive() {
 
             <div>
                 <div className="hidden md:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-x-auto">
-                    <CompactTable columns={COLUMNS} data={data} theme={theme} />
+                    <div className="hidden md:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-x-auto">
+                        <table className="min-w-full">
+                            <thead className="bg-gray-800 text-white">
+                                <tr>
+                                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Estado</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider w-2/5">Información de Cuenta</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider w-1/5">Titular</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider w-1/5">Tipo</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider w-1/5">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                                {cuentasFiltradas.length > 0 ? cuentasFiltradas.map((cuenta) => (
+                                    <tr key={cuenta.id} className="hover:bg-gray-50">
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            {cuenta.esPredeterminada ? (
+                                                <span className="inline-flex items-center px-2.5 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                                    <Star className="w-3 h-3 mr-1.5 fill-current" />
+                                                    Predeterminada
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center px-2.5 py-0.5 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                                                    Secundaria
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="flex items-center">
+                                                <div className="p-2 rounded-full bg-blue-100 text-blue-600 mr-3">
+                                                    {getIconForType(cuenta.tipoCuenta)}
+                                                </div>
+                                                <div>
+                                                    <div className="text-sm font-medium text-gray-900">{formatInfo(cuenta)}</div>
+                                                    <div className="text-sm text-gray-500">
+                                                        {formatTipoCuenta(cuenta.tipoCuenta)} {cuenta.pais ? `(${cuenta.pais})` : ''}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                            <div>
+                                                <div className="font-medium text-gray-900">{cuenta.nombreTitular}</div>
+                                                <div className="text-gray-500">{new Date(cuenta.createdAt).toLocaleDateString('es-MX')}</div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                                                {formatTipoCuenta(cuenta.tipoCuenta)}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="flex items-center space-x-2">
+                                                <motion.button
+                                                    whileHover={{ scale: 1.1 }}
+                                                    onClick={() => handleOpenModalForEdit(cuenta)}
+                                                    className="p-2 text-blue-600 hover:text-blue-800"
+                                                    title="Editar cuenta"
+                                                >
+                                                    <Edit className="w-4 h-4" />
+                                                </motion.button>
+                                                {!cuenta.esPredeterminada && (
+                                                    <motion.button
+                                                        whileHover={{ scale: 1.1 }}
+                                                        onClick={() => handleSetDefault(cuenta.id)}
+                                                        className="p-2 text-yellow-500 hover:text-yellow-700"
+                                                        title="Marcar como predeterminada"
+                                                    >
+                                                        <Star className="w-4 h-4" />
+                                                    </motion.button>
+                                                )}
+                                                <motion.button
+                                                    whileHover={{ scale: 1.1 }}
+                                                    onClick={() => handleDelete(cuenta.id)}
+                                                    className="p-2 text-red-500 hover:text-red-700"
+                                                    title="Eliminar cuenta"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </motion.button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )) : (
+                                    <tr>
+                                        <td colSpan={5} className="text-center py-10 text-gray-500">
+                                            No se encontraron cuentas que coincidan con los filtros.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Tarjetas para Móvil */}
+                    <div className="block md:hidden space-y-4">
+                        {cuentasFiltradas.length > 0 ? (
+                            cuentasFiltradas.map(cuenta => (
+                                <MobileAccountCard
+                                    key={cuenta.id}
+                                    cuenta={cuenta}
+                                    onEdit={handleOpenModalForEdit}
+                                    onDelete={handleDelete}
+                                    onSetDefault={handleSetDefault}
+                                />
+                            ))
+                        ) : (
+                            <div className="text-center py-10 text-gray-500">
+                                <p>No se encontraron cuentas que coincidan con los filtros.</p>
+                            </div>
+                        )}
+                    </div>
                 </div>
                 <div className="block md:hidden space-y-4">
                     {cuentasFiltradas.length > 0 ? (
