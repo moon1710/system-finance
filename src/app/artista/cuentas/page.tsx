@@ -34,7 +34,7 @@ interface CuentaBancaria {
     nombreTitular: string
     esPredeterminada: boolean
     createdAt: string
-    pais?: string // Campo para el país
+    // ✅ === DIRECCIONES (TRANSFORMACIÓN CLAVE) ===
 }
 
 interface MobileAccountCardProps {
@@ -157,18 +157,47 @@ export default function CuentasDashboardResponsive() {
     }
 
     const handleOpenModalForEdit = (cuenta: CuentaBancaria) => {
+        console.log('🔍 [EDIT] Cuenta original desde BD:', cuenta);
+
         setEditingCuenta(cuenta);
-        setFormData({
+
+        // ✅ TRANSFORMAR DATOS PARA EL MODAL (incluyendo direcciones)
+        const datosTransformados = {
             tipoCuenta: cuenta.tipoCuenta,
+            nombreTitular: cuenta.nombreTitular,
             nombreBanco: cuenta.nombreBanco || '',
+            esPredeterminada: cuenta.esPredeterminada,
+
+            // Campos básicos
             clabe: cuenta.clabe || '',
+            tipoCuentaNacional: cuenta.tipoCuentaNacional || '',
             numeroCuenta: cuenta.numeroCuenta || '',
             swift: cuenta.swift || '',
+            codigoABA: cuenta.codigoABA || '',
+            tipoCuentaInternacional: cuenta.tipoCuentaInternacional || '',
             pais: cuenta.pais || '',
             emailPaypal: cuenta.emailPaypal || '',
-            nombreTitular: cuenta.nombreTitular,
-            esPredeterminada: cuenta.esPredeterminada,
-        });
+
+            // ✅ DIRECCIONES (LA PARTE QUE FALTABA)
+            direccionBeneficiario: {
+                direccion: cuenta.direccionBeneficiario || '',
+                ciudad: cuenta.ciudadBeneficiario || '',
+                estado: cuenta.estadoBeneficiario || '',
+                codigoPostal: cuenta.codigoPostalBeneficiario || '',
+                pais: cuenta.paisBeneficiario || ''
+            },
+            direccionBanco: {
+                direccion: cuenta.direccionBanco || '',
+                ciudad: cuenta.ciudadBanco || '',
+                estado: cuenta.estadoBanco || '',
+                codigoPostal: cuenta.codigoPostalBanco || '',
+                pais: cuenta.paisBanco || ''
+            }
+        };
+
+        console.log('✅ [EDIT] Datos transformados para modal:', datosTransformados);
+
+        setFormData(datosTransformados);
         setShowModal(true);
     }
 
