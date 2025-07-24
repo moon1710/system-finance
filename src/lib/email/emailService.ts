@@ -2,6 +2,8 @@
 
 import sgMail from '../sendgrid';
 import { renderTemplate, debugTemplate } from './templateEngine';
+import { formatearInfoCuenta, formatearCriterioAlerta } from './helpers' // ← AGREGAR ESTA IMPORTACIÓN
+
 
 /**
  * Envía un correo electrónico de confirmación de retiro a un artista.
@@ -28,12 +30,50 @@ export async function enviarConfirmacionRetiro(email: string, monto: string | nu
 }
 
 /**
- * Envía una alerta por correo electrónico a los administradores sobre un retiro.
+ * Función helper para preparar datos de email de forma segura CON HELPERS
+ */
+function prepararDatosEmail(data: any): any {
+  console.log('🔧 [PREPARAR DATOS] Data recibida:', data)
+  
+  // Si hay información de cuenta, formatearla
+  let infoCuenta = {}
+  if (data.cuenta) {
+    console.log('🏦 [CUENTA] Formateando información de cuenta:', data.cuenta)
+    infoCuenta = formatearInfoCuenta(data.cuenta)
+    console.log('🏦 [CUENTA] Información formateada:', infoCuenta)
+  }
+  
+  // Formatear criterio de alerta
+  const criterio = formatearCriterioAlerta(data.monto || 0, data.cantidadRetiros || 0)
+  console.log('🚨 [CRITERIO] Criterio generado:', criterio)
+  
+  const resultado = {
+    solicitudId: data.solicitudId || `RET-${Date.now()}`,
+    nombreArtista: data.nombreArtista || 'Artista',
+    monto: (typeof data.monto === 'number' ? data.monto.toLocaleString() : data.monto) || '0',
+    fecha: data.fecha || new Date().toLocaleDateString('es-ES'),
+    urlPanelArtista: data.urlPanelArtista || `${process.env.NEXT_PUBLIC_BASE_URL}/artista/retiros`,
+    // Para alertas de admin
+    nombreAdmin: data.nombreAdmin || 'Administrador',
+    criterioAlerta: criterio, // ← USAR EL CRITERIO FORMATEADO
+    urlPanelAdmin: data.urlPanelAdmin || `${process.env.NEXT_PUBLIC_BASE_URL}/admin/retiros`,
+    // Información de cuenta formateada
+    ...infoCuenta,
+    // Datos adicionales
+    cantidadRetiros: data.cantidadRetiros || 0
+  }
+  
+  console.log('✅ [PREPARAR DATOS] Resultado final:', resultado)
+  return resultado
+}
+
+/**
+ * Envía una alerta por correo electrónico a los administradores sobre un retiro. (CORREGIDA)
  */
 export async function enviarAlertaAdminCompleta(adminEmails: string[], data: any): Promise<void> {
   console.log('🔍 [ALERTA ADMIN] Datos originales recibidos:', data);
   
-  // Preparar datos de forma segura
+  // Preparar datos de forma segura con helpers
   const templateData = prepararDatosEmail(data);
   
   console.log('🔍 [ALERTA ADMIN] Datos preparados para template:', templateData);
@@ -52,7 +92,8 @@ export async function enviarAlertaAdminCompleta(adminEmails: string[], data: any
   const msg = {
     to: adminEmails,
     from: process.env.EMAIL_FROM!,
-    subject: `[ALERTA] Nueva solicitud de retiro #${templateData.solicitudId} requiere revisión`,
+    // ✅ CORRECCIÓN: Usar templateData.nombreArtista en lugar de artistaNombre
+    subject: `Backstage Pagos::: Nueva solicitud de retiro de ${templateData.nombreArtista}`,
     html: html,
   };
 
@@ -64,7 +105,6 @@ export async function enviarAlertaAdminCompleta(adminEmails: string[], data: any
     throw new Error(`Fallo al enviar alerta a administrador.`);
   }
 }
-
 
 /**
  * Función legacy de alerta admin (solo para compatibilidad)
@@ -240,26 +280,6 @@ export async function enviarRetiroCompletado(
     console.error(`❌ [EMAIL ERROR] Retiro completado a ${email}:`, error.response?.body || error)
     throw new Error(`Fallo al enviar notificación de retiro completado.`)
   }
-}
-
-/**
- * Función helper para preparar datos de email de forma segura
- */
-function prepararDatosEmail(data: any): any {
-  return {
-    solicitudId: data.solicitudId || `RET-${Date.now()}`,
-    nombreArtista: data.nombreArtista || 'Artista',
-    monto: (typeof data.monto === 'number' ? data.monto.toLocaleString() : data.monto) || '0',
-    nombreBanco: data.nombreBanco || 'Banco no especificado',
-    tipoCuenta: data.tipoCuenta || 'Cuenta no especificada',
-    ultimosDigitos: data.ultimosDigitos || '****',
-    fecha: data.fecha || new Date().toLocaleDateString('es-ES'),
-    urlPanelArtista: data.urlPanelArtista || `${process.env.NEXT_PUBLIC_BASE_URL}/artista/retiros`,
-    // Para alertas de admin
-    nombreAdmin: data.nombreAdmin || 'Administrador',
-    criterioAlerta: data.criterioAlerta || 'Solicitud de retiro estándar',
-    urlPanelAdmin: data.urlPanelAdmin || `${process.env.NEXT_PUBLIC_BASE_URL}/admin/retiros`
-  };
 }
 
 /**

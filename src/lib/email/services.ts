@@ -1,6 +1,12 @@
 // /src/lib/email/services.ts
 import sgMail from '@/lib/sendgrid'
 import { 
+  formatearInfoCuenta, 
+  formatearCriterioAlerta, 
+  formatearFechaEmail, 
+  generarUrlPanelAdmin 
+} from './helpers'
+import { 
   getBienvenidaTemplate,
   getConfirmacionRetiroTemplate,
   getAlertaAdminTemplate,
@@ -25,14 +31,13 @@ import type {
   TokenRecuperacionData
 } from './types'
 
-// Inicializar SendGrid al cargar el módulo
-// Al inicio de tu services.ts, agrega:
+// Configuración de email
 const EMAIL_CONFIG = {
   from: {
-    email: process.env.EMAIL_FROM,
-    name: process.env.EMAIL_FROM_NAME,
+    email: process.env.EMAIL_FROM || 'noreply@backstagemusica.com',
+    name: process.env.EMAIL_FROM_NAME || 'Backstage Música'
   },
-  baseUrl: process.env.NEXT_PUBLIC_APP_URL
+  baseUrl: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 }
 
 /**
@@ -81,7 +86,16 @@ export class ConfirmacionRetiroService {
  * Servicio para alertas a administradores
  */
 export class AlertaAdminService {
-  static async enviar({ adminEmails, artistaNombre, monto }: AlertaAdminData): Promise<void> {
+  static async enviar({ 
+    adminEmails, 
+    artistaNombre, 
+    monto, 
+    solicitudId, 
+    cuenta, 
+    fecha, 
+    cantidadRetiros 
+  }: AlertaAdminData): Promise<void> {
+    
     if (!validateEmails(adminEmails)) {
       throw new Error(`Uno o más emails de admin son inválidos`)
     }
@@ -90,17 +104,36 @@ export class AlertaAdminService {
       throw new Error('Se requiere al menos un email de administrador')
     }
 
+    // Formatear información usando los helpers
+    const infoCuenta = formatearInfoCuenta(cuenta)
+    const criterio = formatearCriterioAlerta(monto, cantidadRetiros || 0)
+    const fechaFormateada = formatearFechaEmail(fecha)
+    const urlPanel = generarUrlPanelAdmin(solicitudId)
+
+    // Preparar datos para el template
+    const templateData = {
+      solicitudId,
+      nombreAdmin: 'Administrador',
+      nombreArtista: artistaNombre,
+      monto: monto.toLocaleString('en-US'),
+      fecha: fechaFormateada,
+      cuenta: cuenta,  // ← PASAR EL OBJETO COMPLETO
+      cantidadRetiros: cantidadRetiros || 0,
+      urlPanelAdmin: urlPanel
+    }
+
     const emailData = {
       to: adminEmails,
       from: EMAIL_CONFIG.from,
       subject: `Backstage Pagos::: Nueva solicitud de retiro de ${artistaNombre}`,
-      html: getAlertaAdminTemplate(artistaNombre, monto)
+      html: getAlertaAdminTemplate(templateData)  // ← Ahora procesará los helpers internamente
     }
 
     await sendEmail(emailData)
     emailLogger.success('ALERTA_ADMIN', adminEmails.join(', '), { 
       artista: artistaNombre, 
       monto,
+      solicitudId,
       adminCount: adminEmails.length 
     })
   }

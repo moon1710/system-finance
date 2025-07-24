@@ -1,6 +1,7 @@
 // /src/lib/email/templates.ts
 import { EstadoRetiro } from './types'
-
+import { formatearInfoCuenta, formatearCriterioAlerta } from './helpers'
+import { renderTemplate } from './templateEngine'
 /**
  * Template base con footer común
  */
@@ -41,18 +42,23 @@ export function getConfirmacionRetiroTemplate(monto: string | number): string {
 /**
  * Template para alerta de admin
  */
-export function getAlertaAdminTemplate(artistaNombre: string, monto: string | number): string {
-  return `
-    <p>Estimado administrador,</p>
-    <p>Se ha registrado una nueva solicitud de retiro que requiere su atención:</p>
-    <ul>
-      <li><strong>Artista:</strong> ${artistaNombre}</li>
-      <li><strong>Monto solicitado:</strong> $${typeof monto === 'number' ? monto.toLocaleString() : monto} USD</li>
-    </ul>
-    <p>Por favor, ingrese al panel de administración para revisar los detalles.</p>
-    <p>Saludos,</p>
-    <p>El sistema de alertas de Tu Plataforma</p>
-  `
+export function getAlertaAdminTemplate(data: any): string {
+  // Si data.cuenta existe, formatear la info
+  if (data.cuenta) {
+    const infoCuenta = formatearInfoCuenta(data.cuenta)
+    const criterio = formatearCriterioAlerta(data.monto, data.cantidadRetiros || 0)
+    
+    const templateData = {
+      ...data,
+      ...infoCuenta,
+      criterioAlerta: criterio
+    }
+    
+    return renderTemplate('alerta-admin', templateData)
+  }
+  
+  // Fallback si no hay información de cuenta
+  return renderTemplate('alerta-admin', data)
 }
 
 /**

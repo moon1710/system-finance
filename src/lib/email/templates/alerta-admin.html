@@ -3,89 +3,566 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Alerta de Nueva Solicitud de Retiro</title>
+    <title>Nueva Solicitud de Retiro - Backstage Música</title>
     <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: #dc3545; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
-        .alert-icon { font-size: 2em; margin-bottom: 10px; }
-        .content { background: #f8f9fa; padding: 25px; border: 1px solid #dee2e6; }
-        .footer { background: #343a40; color: white; padding: 15px; text-align: center; border-radius: 0 0 8px 8px; }
-        .details { background: white; padding: 20px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #dc3545; }
-        .details ul { list-style: none; padding: 0; }
-        .details li { padding: 8px 0; border-bottom: 1px solid #eee; }
-        .details li:last-child { border-bottom: none; }
-        .details strong { color: #dc3545; }
-        .button { display: inline-block; background: #dc3545; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; margin: 15px 0; }
-        .priority { background: #f8d7da; color: #721c24; padding: 15px; border-radius: 5px; text-align: center; font-weight: bold; margin: 15px 0; }
-        .criteria { background: #fff3cd; color: #856404; padding: 10px; border-radius: 5px; margin: 10px 0; }
-        .account-info { background: #e7f3ff; padding: 15px; border-radius: 5px; margin: 15px 0; }
-        .account-type { display: inline-block; background: #007bff; color: white; padding: 3px 8px; border-radius: 3px; font-size: 0.8em; margin-left: 10px; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #f7f7f7 0%, #f0f0f0 100%);
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(103, 98, 179, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(82, 124, 235, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(16, 207, 189, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(103, 98, 179, 0.1);
+            overflow: hidden;
+            border: 1px solid rgba(240, 240, 240, 0.8);
+            position: relative;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #6762b3 0%, #527ceb 100%);
+            padding: 40px 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: 
+                radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 70% 80%, rgba(16, 207, 189, 0.1) 0%, transparent 40%);
+            animation: floatBackground 6s ease-in-out infinite;
+        }
+        
+        @keyframes floatBackground {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-10px) rotate(1deg); }
+        }
+        
+        .logo {
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 1;
+            opacity: 0.9;
+        }
+        
+        .alert-badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50px;
+            padding: 8px 16px;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .alert-text {
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .main-title {
+            color: white;
+            font-size: 28px;
+            font-weight: 600;
+            line-height: 1.2;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .solicitud-id {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 16px;
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+            position: relative;
+            z-index: 1;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px 16px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+        
+        .content {
+            padding: 40px 30px;
+            position: relative;
+        }
+        
+        .greeting {
+            font-size: 16px;
+            color: #374151;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        .priority-alert {
+            background: linear-gradient(135deg, #48b0f7 0%, #10cfbd 100%);
+            border-radius: 16px;
+            padding: 25px;
+            text-align: center;
+            margin: 30px 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .priority-alert::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+        }
+        
+        .priority-text {
+            color: white;
+            font-size: 16px;
+            font-weight: 700;
+            position: relative;
+            z-index: 1;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        
+        .details-card {
+            background: rgba(247, 247, 247, 0.7);
+            border: 2px solid rgba(103, 98, 179, 0.1);
+            border-radius: 16px;
+            padding: 30px;
+            margin: 30px 0;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+        
+        .details-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(135deg, #6762b3 0%, #527ceb 100%);
+        }
+        
+        .details-title {
+            color: #374151;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 25px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .detail-item {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 12px;
+            border: 1px solid rgba(103, 98, 179, 0.1);
+            position: relative;
+            z-index: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(5px);
+        }
+        
+        .detail-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .detail-label {
+            color: #6b7280;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .detail-value {
+            color: #1f2937;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .detail-value.monto {
+            color: #059669;
+            font-size: 18px;
+            font-weight: 700;
+        }
+        
+        .account-card {
+            background: linear-gradient(135deg, rgba(72, 176, 247, 0.1) 0%, rgba(16, 207, 189, 0.1) 100%);
+            border: 2px solid rgba(72, 176, 247, 0.2);
+            border-radius: 16px;
+            padding: 30px;
+            margin: 30px 0;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+        
+        .account-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(135deg, #48b0f7 0%, #10cfbd 100%);
+        }
+        
+        .account-title {
+            color: #374151;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .account-bank {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .bank-name {
+            color: #1e293b;
+            font-size: 16px;
+            font-weight: 600;
+            margin-right: 15px;
+        }
+        
+        .account-type-badge {
+            padding: 6px 14px;
+            border-radius: 25px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .type-paypal {
+            background: linear-gradient(135deg, #48b0f7, #527ceb);
+            color: white;
+        }
+        
+        .type-nacional {
+            background: linear-gradient(135deg, #10cfbd, #019fd2);
+            color: white;
+        }
+        
+        .type-internacional {
+            background: linear-gradient(135deg, #6762b3, #527ceb);
+            color: white;
+        }
+        
+        .account-details {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .account-detail {
+            background: rgba(255, 255, 255, 0.6);
+            padding: 12px 16px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(103, 98, 179, 0.1);
+            font-size: 14px;
+        }
+        
+        .account-detail:last-child {
+            margin-bottom: 0;
+        }
+        
+        .account-detail strong {
+            color: #374151;
+            font-weight: 600;
+        }
+        
+        .account-detail .code {
+            font-family: 'Courier New', monospace;
+            color: #1f2937;
+            font-weight: 600;
+        }
+        
+        .criteria-card {
+            background: linear-gradient(135deg, rgba(247, 247, 247, 0.9) 0%, rgba(240, 240, 240, 0.9) 100%);
+            border: 1px solid rgba(103, 98, 179, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 30px 0;
+            backdrop-filter: blur(5px);
+        }
+        
+        .criteria-title {
+            color: #374151;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .criteria-text {
+            color: #6b7280;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .actions-card {
+            background: rgba(16, 207, 189, 0.05);
+            border: 1px solid rgba(16, 207, 189, 0.2);
+            border-radius: 12px;
+            padding: 25px;
+            margin: 30px 0;
+            backdrop-filter: blur(5px);
+        }
+        
+        .actions-title {
+            color: #374151;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        
+        .actions-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .actions-list li {
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 10px;
+            padding-left: 20px;
+            position: relative;
+        }
+        
+        .actions-list li::before {
+            content: '●';
+            color: #48b0f7;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+        
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #6762b3 0%, #527ceb 100%);
+            color: white;
+            text-decoration: none;
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 16px;
+            margin: 30px 0;
+            box-shadow: 0 8px 25px rgba(103, 98, 179, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .cta-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 35px rgba(103, 98, 179, 0.4);
+        }
+        
+        .cta-button:hover::before {
+            left: 100%;
+        }
+        
+        .footer {
+            background: rgba(247, 247, 247, 0.8);
+            padding: 30px;
+            text-align: center;
+            border-top: 1px solid rgba(240, 240, 240, 0.8);
+            backdrop-filter: blur(10px);
+        }
+        
+        .footer-text {
+            color: #64748b;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        
+        .company-name {
+            color: #6762b3;
+            font-weight: 600;
+        }
+        
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(103, 98, 179, 0.2), transparent);
+            margin: 30px 0;
+        }
+        
+        @media (max-width: 640px) {
+            body {
+                padding: 10px;
+            }
+            
+            .header {
+                padding: 30px 20px;
+            }
+            
+            .main-title {
+                font-size: 24px;
+            }
+            
+            .content {
+                padding: 30px 20px;
+            }
+            
+            .details-card, .account-card {
+                padding: 25px 20px;
+            }
+            
+            .footer {
+                padding: 25px 20px;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="alert-icon">⚠️</div>
-        <h1>ALERTA - Nueva Solicitud de Retiro</h1>
-        <p>ID: <strong>#{{solicitudId}}</strong></p>
-    </div>
-
-    <div class="content">
-        <p>Hola <strong>{{nombreAdmin}}</strong>,</p>
+    <div class="email-container">
+        <div class="header">
+            <div class="logo">Backstage Música</div>
+            <div class="alert-badge">
+                <span class="alert-text">Alerta de Sistema</span>
+            </div>
+            <h1 class="main-title">Nueva Solicitud de Retiro</h1>
+            <div class="solicitud-id">ID: #{{solicitudId}}</div>
+        </div>
         
-        <div class="priority">
-            🚨 SOLICITUD REQUIERE REVISIÓN 🚨
-        </div>
-
-        <p>El artista <strong>{{nombreArtista}}</strong> ha generado una nueva solicitud de retiro:</p>
-
-        <div class="details">
-            <ul>
-                <li><strong>ID de solicitud:</strong> {{solicitudId}}</li>
-                <li><strong>Artista:</strong> {{nombreArtista}}</li>
-                <li><strong>Monto:</strong> ${{monto}} USD</li>
-                <li><strong>Fecha de solicitud:</strong> {{fecha}}</li>
-            </ul>
-        </div>
-
-        <div class="account-info">
-            <h4>💳 Cuenta de destino:</h4>
-            <p>
-                <strong>{{nombreBanco}}</strong>
-                <span class="account-type">{{tipoCuenta}}</span>
+        <div class="content">
+            <p class="greeting">
+                <strong>Hola {{nombreAdmin}},</strong><br><br>
+                El artista <strong>{{nombreArtista}}</strong> ha generado una nueva solicitud de retiro que requiere tu atención inmediata.
             </p>
-            <p><strong>Identificador:</strong> {{identificadorCuenta}}</p>
-            <p><strong>Últimos dígitos:</strong> {{ultimosDigitos}}</p>
+            
+            <div class="priority-alert">
+                <div class="priority-text">SOLICITUD REQUIERE REVISIÓN INMEDIATA</div>
+            </div>
+            
+            <div class="details-card">
+                <h3 class="details-title">Detalles de la Solicitud</h3>
+                <div class="detail-item">
+                    <span class="detail-label">ID de Solicitud  </span>
+                    <span class="detail-value">{{solicitudId}}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Artista  </span>
+                    <span class="detail-value">{{nombreArtista}}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Monto Solicitado  </span>
+                    <span class="detail-value monto">${{monto}} USD</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Fecha de Solicitud  </span>
+                    <span class="detail-value">{{fecha}}</span>
+                </div>
+            </div>
+            
+            <div class="account-card">
+                <h4 class="account-title">Cuenta de Destino </h4>
+                <div class="account-bank">
+                    <span class="bank-name">{{nombreBanco}}</span>
+                    <span class="account-type-badge type-{{tipoCuenta}}">{{tipoCuentaLabel}}</span>
+                </div>
+            </div>
+            
+            <div class="actions-card">
+                <h4 class="actions-title">Acciones Disponibles</h4>
+                <ul class="actions-list">
+                    <li><strong>Aprobar</strong> - Cambiar estado a "Procesando"</li>
+                    <li><strong>Rechazar</strong> - Denegar la solicitud con motivo</li>
+                    <li><strong>Completar</strong> - Subir comprobante y marcar como completado</li>
+                </ul>
+            </div>
+            
+            <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 30px 0; text-align: center;">
+                Accede al panel de administración para revisar y procesar esta solicitud:
+            </p>
+            
+            <div style="text-align: center;">
+                <a href="{{urlPanelAdmin}}" class="cta-button">Revisar Solicitud</a>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <p style="color: #64748b; font-size: 15px; line-height: 1.6; text-align: center;">
+                <strong>Gracias por atender esta solicitud con prontitud.</strong><br>
+                Una respuesta rápida ayuda a mantener la satisfacción de nuestros artistas.
+            </p>
         </div>
-
-        <div class="criteria">
-            <strong>📋 Criterio de alerta:</strong><br>
-            {{criterioAlerta}}
-        </div>
-
-        <div style="background: #d1ecf1; padding: 15px; border-radius: 5px; margin: 15px 0;">
-            <p><strong>🔍 Acciones disponibles:</strong></p>
-            <ul style="margin: 10px 0;">
-                <li>• <strong>Aprobar</strong> - Cambiar estado a "Procesando"</li>
-                <li>• <strong>Rechazar</strong> - Denegar la solicitud con motivo</li>
-                <li>• <strong>Completar</strong> - Subir comprobante y marcar como completado</li>
-            </ul>
-        </div>
-
-        <p>Accede al panel de administración para tomar acción sobre esta solicitud:</p>
         
-        <div style="text-align: center;">
-            <a href="{{urlPanelAdmin}}" class="button" style="color: #dee2e6;">🔍 Revisar Solicitud</a>
+        <div class="footer">
+            <p class="footer-text">
+                Este es un email automático de alerta del sistema.<br>
+                Si tienes alguna duda, contacta al equipo técnico.
+            </p>
+            <p class="footer-text">
+                <strong>Saludos cordiales,</strong><br>
+                <span class="company-name">El equipo de Backstage Música</span>
+            </p>
         </div>
-
-        <p><strong>Gracias por atender esta solicitud con prontitud.</strong></p>
-    </div>
-
-    <div class="footer">
-        <p>Saludos,<br>
-        El equipo de <strong>Sistema de Pagos</strong></p>
-        <p style="font-size: 0.9em; opacity: 0.8;">
-            Este es un email automático de alerta. Responde rápidamente para mantener la calidad del servicio.
-        </p>
     </div>
 </body>
 </html>
