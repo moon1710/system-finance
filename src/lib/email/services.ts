@@ -1,5 +1,5 @@
 // /src/lib/email/services.ts
-import { EMAIL_CONFIG, initializeSendGrid } from './config'
+import sgMail from '@/lib/sendgrid'
 import { 
   getBienvenidaTemplate,
   getConfirmacionRetiroTemplate,
@@ -26,7 +26,14 @@ import type {
 } from './types'
 
 // Inicializar SendGrid al cargar el módulo
-initializeSendGrid()
+// Al inicio de tu services.ts, agrega:
+const EMAIL_CONFIG = {
+  from: {
+    email: process.env.EMAIL_FROM,
+    name: process.env.EMAIL_FROM_NAME,
+  },
+  baseUrl: process.env.NEXT_PUBLIC_APP_URL
+}
 
 /**
  * Servicio para emails de bienvenida
@@ -40,7 +47,7 @@ export class BienvenidaEmailService {
     const emailData = {
       to: email,
       from: EMAIL_CONFIG.from,
-      subject: '¡Bienvenido a nuestra plataforma!',
+      subject: 'Backstage Pagos::: ¡Bienvenido a nuestra plataforma!',
       html: getBienvenidaTemplate(email, password)
     }
 
@@ -61,7 +68,7 @@ export class ConfirmacionRetiroService {
     const emailData = {
       to: email,
       from: EMAIL_CONFIG.from,
-      subject: 'Confirmación de solicitud de retiro',
+      subject: 'Backstage Pagos::: Confirmación de solicitud de retiro',
       html: getConfirmacionRetiroTemplate(monto)
     }
 
@@ -86,7 +93,7 @@ export class AlertaAdminService {
     const emailData = {
       to: adminEmails,
       from: EMAIL_CONFIG.from,
-      subject: `ALERTA: Nueva solicitud de retiro de ${artistaNombre}`,
+      subject: `Backstage Pagos::: Nueva solicitud de retiro de ${artistaNombre}`,
       html: getAlertaAdminTemplate(artistaNombre, monto)
     }
 
@@ -153,7 +160,7 @@ export class CambioPasswordService {
     const emailData = {
       to: email,
       from: EMAIL_CONFIG.from,
-      subject: 'Confirmación de cambio de contraseña',
+      subject: 'Backstage Pagos::: Confirmación de cambio de contraseña',
       html: getConfirmacionCambioPasswordTemplate()
     }
 
@@ -180,7 +187,7 @@ export class TokenRecuperacionService {
     const emailData = {
       to: email,
       from: EMAIL_CONFIG.from,
-      subject: 'Recuperación de contraseña',
+      subject: 'Backstage Pagos::: Recuperación de contraseña',
       html: getTokenRecuperacionTemplate(recoveryLink)
     }
 

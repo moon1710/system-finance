@@ -12,16 +12,16 @@ export function formatearMonto(monto: number): string {
 /**
  * Genera el asunto para emails de actualización de estado
  */
-export function getSubjectActualizacionEstado(estado: EstadoRetiro, montoFormateado: string): string {
+export function getSubjectActualizacionEstado(estado: EstadoRetiro): string {
   switch (estado) {
     case 'Aprobado':
-      return `Tu retiro de ${montoFormateado} ha sido aprobado`
+      return `Backstage Pagos::: Tu retiro ha sido aprobado`
     case 'Completado':
-      return `¡Tu retiro de ${montoFormateado} ha sido enviado!`
+      return `Backstage Pagos::: ¡Tu transferencia ha sido completada!`
     case 'Rechazado':
-      return `Tu solicitud de retiro de ${montoFormateado} fue rechazada`
+      return `Backstage Pagos::: Tu solicitud de retiro fue rechazada`
     default:
-      return `Actualización de tu retiro de ${montoFormateado}`
+      return `Backstage Pagos::: Actualización de tu retiro`
   }
 }
 
