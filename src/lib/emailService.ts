@@ -114,7 +114,7 @@ export async function enviarActualizacionEstado(
   // Construir el cuerpo y asunto del correo dinámicamente
   switch (estado) {
     case 'Aprobado':
-      subject = `Tu retiro de ${montoFormateado} ha sido aprobado`;
+      subject = `Pagos. Backstage Música: Tu retiro ha sido aprobado`;
       body = `
         <p>Hola, ${nombreCompleto},</p>
         <p>Buenas noticias. Tu solicitud de retiro por <strong>${montoFormateado}</strong> ha sido aprobada y está siendo procesada.</p>
@@ -122,7 +122,7 @@ export async function enviarActualizacionEstado(
       `;
       break;
     case 'Completado':
-      subject = `¡Tu retiro de ${montoFormateado} ha sido enviado!`;
+      subject = `Pagos. Backstage Música ¡Tu retiro ha sido enviado!`;
       body = `
         <p>Hola, ${nombreCompleto},</p>
         <p>¡Excelente! Hemos enviado el pago de tu retiro por <strong>${montoFormateado}</strong> a tu cuenta registrada.</p>
@@ -130,7 +130,7 @@ export async function enviarActualizacionEstado(
       `;
       break;
     case 'Rechazado':
-      subject = `Tu solicitud de retiro de ${montoFormateado} fue rechazada`;
+      subject = `Pagos. Backstage Música: Tu solicitud de retiro fue rechazada`;
       body = `
         <p>Hola, ${nombreCompleto},</p>
         <p>Lamentamos informarte que tu solicitud de retiro por <strong>${montoFormateado}</strong> no pudo ser procesada.</p>
