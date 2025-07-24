@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
               email: true,
             },
           },
-          cuentaBancaria: cuentaBancariaCompleta, // ✅ TODOS LOS CAMPOS
+          cuentaBancaria: true, // ✅ TODOS LOS CAMPOS
         },
         orderBy: {
           fechaSolicitud: "desc",
@@ -155,7 +155,7 @@ export async function GET(request: NextRequest) {
       const retiros = await prisma.retiro.findMany({
         where: { usuarioId: session.userId },
         include: {
-          cuentaBancaria: cuentaBancariaCompleta // ✅ TODOS LOS CAMPOS
+          cuentaBancaria: true // ✅ TODOS LOS CAMPOS
         },
         orderBy: { fechaSolicitud: 'desc' }
       })
@@ -256,7 +256,7 @@ export async function POST(request: NextRequest) {
             email: true
           }
         },
-        cuentaBancaria: cuentaBancariaCompleta // ✅ TODOS LOS CAMPOS
+        cuentaBancaria: true // ✅ TODOS LOS CAMPOS
       }
     })
     
