@@ -1,11 +1,10 @@
-// /src/app/api/retiros/[id]/aprobar/route.ts
-
 import { NextRequest, NextResponse } from 'next/server';
 import { getIronSession } from 'iron-session';
 import { sessionOptions, SessionData } from '@/lib/session';
 import { aprobarRetiro } from '@/lib/services/retiros';
 import { enviarActualizacionEstado } from '@/lib/email/emailService';
 import { prisma } from '@/lib/db';
+import { Decimal } from '@prisma/client/runtime/library';
 
 interface RouteParams {
   params: {
@@ -20,10 +19,7 @@ interface RouteParams {
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   const response = new NextResponse();
   try {
-    // CORRECCIÓN: Await params antes de desestructurar
-    const { id } = await params; // <--- CAMBIO AQUÍ: await params
-
-    // ... (el resto de tu código es correcto) ...
+    const { id } = params;
 
     // Verificar autenticación
     const session = await getIronSession<SessionData>(request, response, sessionOptions);
@@ -50,45 +46,59 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    // 1. Llamar al servicio para aprobar el retiro
     const resultado = await aprobarRetiro(id, session.userId);
 
-    if (!resultado.exito) {
+    if (!resultado.exito || !resultado.data) {
       return NextResponse.json(
-        { error: resultado.mensaje },
+        { error: resultado.mensaje || 'No se pudo aprobar el retiro.' },
         { status: 400 }
       );
     }
-
+    
+    // 2. Intentar enviar notificación por email
     try {
       const retiroAprobado = resultado.data;
       
-      // Obtener todos los datos necesarios en una sola consulta
       const artista = await prisma.usuario.findUnique({
         where: { id: retiroAprobado.usuarioId },
         select: { email: true, nombreCompleto: true }
       });
 
       if (artista?.email && artista.nombreCompleto) {
-        // Llamar a la nueva función con todos los parámetros
+        
+        // --- INICIO DE LA CORRECCIÓN ---
+
+        // ✅ Paso 1: Usar el nombre de propiedad correcto: `montoSolicitado`.
+        // ✅ Paso 2: Convertir el valor de Decimal a Number antes de pasarlo.
+        const montoComoNumero = Number(retiroAprobado.montoSolicitado);
+
         await enviarActualizacionEstado(
           artista.email,
-          retiroAprobado.estado as 'Aprobado' | 'Completado' | 'Rechazado', // Cast para seguridad de tipos
+          'Aprobado', // El estado al aprobar es 'Procesando', pero el email es de "Aprobación"
           artista.nombreCompleto,
-          retiroAprobado.monto
+          montoComoNumero, // Se pasa el número ya convertido
+          // Puedes agregar un motivo si es necesario
         );
-        console.log(`[EMAIL] Notificación de estado (${retiroAprobado.estado}) enviada a artista: ${artista.email}`);
+
+        // --- FIN DE LA CORRECCIÓN ---
+
+        console.log(`[EMAIL] Notificación de aprobación enviada a artista: ${artista.email}`);
       } else {
-        console.warn(`[EMAIL WARN] Datos de artista incompletos para retiro ${id}.`);
+        console.warn(`[EMAIL WARN] Datos de artista incompletos para retiro ${id}. No se pudo enviar email.`);
       }
     } catch (emailError) {
+      // El error de email no debe detener la respuesta exitosa de la API.
+      // La aprobación ya se realizó en la base de datos.
       console.error(`[EMAIL ERROR] Fallo al enviar email de aprobación para retiro ${id}:`, emailError);
     }
 
+    // 3. Devolver respuesta exitosa
     return NextResponse.json({
       success: true,
       mensaje: resultado.mensaje,
       retiro: resultado.data
-    });
+    }, { headers: response.headers }); // Asegura que las cookies de sesión se establezcan
 
   } catch (error) {
     console.error('Error en PUT /api/retiros/[id]/aprobar:', error);

@@ -32,6 +32,7 @@
     "clsx": "^2.1.1",
     "form-data": "^4.0.3",
     "framer-motion": "^12.23.3",
+    "handlebars": "^4.7.8",
     "iron-session": "^8.0.4",
     "jose": "^6.0.11",
     "lucide-react": "^0.525.0",
