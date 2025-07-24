@@ -3,52 +3,530 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Retiro Completado</title>
+    <title>¡Tu Retiro está Completado! - Backstage Música</title>
     <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: #28a745; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
-        .content { background: #f8f9fa; padding: 25px; border: 1px solid #dee2e6; }
-        .footer { background: #343a40; color: white; padding: 15px; text-align: center; border-radius: 0 0 8px 8px; }
-        .details { background: white; padding: 20px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #28a745; }
-        .button { display: inline-block; background: #28a745; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; margin: 10px 5px; }
-        .status { background: #d4edda; color: #155724; padding: 15px; border-radius: 5px; text-align: center; font-weight: bold; margin: 15px 0; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #f7f7f7 0%, #f0f0f0 100%);
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(16, 207, 189, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(72, 176, 247, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(103, 98, 179, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(16, 207, 189, 0.15);
+            overflow: hidden;
+            border: 1px solid rgba(240, 240, 240, 0.8);
+            position: relative;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #10cfbd 0%, #019fd2 100%);
+            padding: 40px 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: 
+                radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.2) 0%, transparent 40%),
+                radial-gradient(circle at 70% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 40%);
+            animation: celebrationFloat 8s ease-in-out infinite;
+        }
+        
+        @keyframes celebrationFloat {
+            0%, 100% { transform: translateY(0px) rotate(0deg) scale(1); }
+            33% { transform: translateY(-15px) rotate(1deg) scale(1.02); }
+            66% { transform: translateY(-5px) rotate(-1deg) scale(0.98); }
+        }
+        
+        .logo {
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 1;
+            opacity: 0.9;
+        }
+        
+        .celebration-badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            border-radius: 50px;
+            padding: 10px 20px;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .celebration-text {
+            color: white;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .main-title {
+            color: white;
+            font-size: 32px;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 1;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .solicitud-id {
+            color: rgba(255, 255, 255, 0.95);
+            font-size: 16px;
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+            position: relative;
+            z-index: 1;
+            background: rgba(255, 255, 255, 0.15);
+            padding: 10px 20px;
+            border-radius: 25px;
+            display: inline-block;
+        }
+        
+        .content {
+            padding: 40px 30px;
+            position: relative;
+        }
+        
+        .greeting {
+            font-size: 16px;
+            color: #374151;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        .celebration-message {
+            background: linear-gradient(135deg, rgba(16, 207, 189, 0.15) 0%, rgba(72, 176, 247, 0.15) 100%);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            margin: 30px 0;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid rgba(16, 207, 189, 0.3);
+        }
+        
+        .celebration-message::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(135deg, #10cfbd 0%, #48b0f7 100%);
+        }
+        
+        .celebration-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+            display: block;
+            animation: bounce 2s ease-in-out infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .celebration-title {
+            color: #10cfbd;
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .celebration-subtitle {
+            color: #019fd2;
+            font-size: 16px;
+            font-weight: 500;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .payment-card {
+            background: rgba(247, 247, 247, 0.8);
+            border: 2px solid rgba(16, 207, 189, 0.2);
+            border-radius: 16px;
+            padding: 30px;
+            margin: 30px 0;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+        
+        .payment-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(135deg, #10cfbd 0%, #48b0f7 100%);
+        }
+        
+        .payment-title {
+            color: #374151;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 25px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .payment-item {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 12px;
+            padding: 18px 24px;
+            margin-bottom: 15px;
+            border: 1px solid rgba(16, 207, 189, 0.1);
+            position: relative;
+            z-index: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(5px);
+        }
+        
+        .payment-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .payment-label {
+            color: #6b7280;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .payment-value {
+            color: #1f2937;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .payment-value.monto {
+            color: #10cfbd;
+            font-size: 20px;
+            font-weight: 700;
+        }
+        
+        .status-success {
+            background: linear-gradient(135deg, rgba(16, 207, 189, 0.1) 0%, rgba(72, 176, 247, 0.1) 100%);
+            border: 2px solid rgba(16, 207, 189, 0.3);
+            border-radius: 16px;
+            padding: 25px;
+            margin: 30px 0;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+        
+        .status-success::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(135deg, #10cfbd 0%, #48b0f7 100%);
+        }
+        
+        .status-icon {
+            font-size: 36px;
+            margin-bottom: 10px;
+            display: block;
+        }
+        
+        .status-text {
+            color: #10cfbd;
+            font-size: 18px;
+            font-weight: 700;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .next-steps-card {
+            background: rgba(72, 176, 247, 0.05);
+            border: 1px solid rgba(72, 176, 247, 0.2);
+            border-radius: 12px;
+            padding: 25px;
+            margin: 30px 0;
+            backdrop-filter: blur(5px);
+        }
+        
+        .next-steps-title {
+            color: #019fd2;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        
+        .next-steps-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .next-steps-list li {
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 12px;
+            padding-left: 25px;
+            position: relative;
+            line-height: 1.5;
+        }
+        
+        .next-steps-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #10cfbd;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .cta-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+        
+        .cta-button {
+            display: inline-block;
+            text-decoration: none;
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 15px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .cta-button.primary {
+            background: linear-gradient(135deg, #6762b3 0%, #527ceb 100%);
+            color: white;
+        }
+        
+        .cta-button.secondary {
+            background: rgba(255, 255, 255, 0.9);
+            color: #6762b3;
+            border: 2px solid rgba(103, 98, 179, 0.2);
+        }
+        
+        .cta-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        }
+        
+        .cta-button:hover::before {
+            left: 100%;
+        }
+        
+        .footer {
+            background: rgba(247, 247, 247, 0.8);
+            padding: 30px;
+            text-align: center;
+            border-top: 1px solid rgba(240, 240, 240, 0.8);
+            backdrop-filter: blur(10px);
+        }
+        
+        .footer-text {
+            color: #64748b;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        
+        .company-name {
+            color: #6762b3;
+            font-weight: 600;
+        }
+        
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(16, 207, 189, 0.3), transparent);
+            margin: 30px 0;
+        }
+        
+        @media (max-width: 640px) {
+            body {
+                padding: 10px;
+            }
+            
+            .header {
+                padding: 30px 20px;
+            }
+            
+            .main-title {
+                font-size: 26px;
+            }
+            
+            .content {
+                padding: 30px 20px;
+            }
+            
+            .payment-card, .celebration-message {
+                padding: 25px 20px;
+            }
+            
+            .cta-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .cta-button {
+                width: 100%;
+                text-align: center;
+                max-width: 280px;
+            }
+            
+            .footer {
+                padding: 25px 20px;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>🎉 ¡Retiro Completado!</h1>
-        <p>ID: #{{solicitudId}}</p>
-    </div>
-
-    <div class="content">
-        <p>Hola <strong>{{nombreArtista}}</strong>,</p>
-        
-        <p>¡Excelentes noticias! Tu retiro ha sido completado exitosamente.</p>
-
-        <div class="details">
-            <ul style="list-style: none; padding: 0;">
-                <li><strong>ID de solicitud:</strong> {{solicitudId}}</li>
-                <li><strong>Monto pagado:</strong> ${{monto}} USD</li>
-                <li><strong>Fecha de pago:</strong> {{fechaCompletado}}</li>
-                <li><strong>Método de pago:</strong> {{metodoPago}}</li>
-            </ul>
-        </div>
-
-        <div class="status">
-            ✅ <strong>Estado:</strong> COMPLETADO
-        </div>
-
-        <div style="text-align: center;">
-            <a href="{{urlComprobante}}" class="button">📄 Descargar Comprobante</a>
-            <a href="{{urlPanelArtista}}" class="button" style="background: #007bff;">📊 Ver Panel</a>
+    <div class="email-container">
+        <div class="header">
+            <div class="logo">Backstage Música</div>
+            <div class="celebration-badge">
+                <span class="celebration-text">¡Completado!</span>
+            </div>
+            <h1 class="main-title">¡Tu Pago ha sido Enviado!</h1>
+            <div class="solicitud-id">Retiro #{{solicitudId}}</div>
         </div>
         
-        <p><strong>¡Gracias por usar nuestro sistema!</strong></p>
-    </div>
-
-    <div class="footer">
-        <p>Saludos cordiales,<br>
-        El equipo de <strong>Sistema de Pagos</strong></p>
+        <div class="content">
+            <p class="greeting">
+                <strong>¡Excelentes noticias, {{nombreArtista}}!</strong><br><br>
+                Tu retiro ha sido procesado exitosamente y el pago ya está en camino a tu cuenta bancaria.
+            </p>
+            
+            <div class="celebration-message">
+                <span class="celebration-icon">🎉</span>
+                <div class="celebration-title">¡Pago Completado!</div>
+                <div class="celebration-subtitle">Tu dinero ya está siendo transferido</div>
+            </div>
+            
+            <div class="payment-card">
+                <h3 class="payment-title">Detalles del Pago</h3>
+                <div class="payment-item">
+                    <span class="payment-label">ID de Retiro</span>
+                    <span class="payment-value">{{solicitudId}}</span>
+                </div>
+                <div class="payment-item">
+                    <span class="payment-label">Monto Transferido</span>
+                    <span class="payment-value monto">${{monto}} USD</span>
+                </div>
+                <div class="payment-item">
+                    <span class="payment-label">Fecha de Completado</span>
+                    <span class="payment-value">{{fechaCompletado}}</span>
+                </div>
+                <div class="payment-item">
+                    <span class="payment-label">Método de Pago</span>
+                    <span class="payment-value">{{metodoPago}}</span>
+                </div>
+            </div>
+            
+            <div class="status-success">
+                <span class="status-icon">✅</span>
+                <div class="status-text">Transferencia Exitosa</div>
+            </div>
+            
+            <div class="next-steps-card">
+                <h4 class="next-steps-title">¿Qué sigue ahora?</h4>
+                <ul class="next-steps-list">
+                    <li><strong>Verifica tu cuenta bancaria</strong> - El dinero puede tardar de 1 a 3 días hábiles en aparecer</li>
+                    <li><strong>Guarda este comprobante</strong> - Descarga el comprobante oficial para tus registros</li>
+                    <li><strong>Revisa tu panel</strong> - Consulta el historial completo de tus retiros</li>
+                    <li><strong>¿Dudas?</strong> - Nuestro equipo de soporte está disponible para ayudarte</li>
+                </ul>
+            </div>
+            
+            <div class="cta-buttons">
+                <a href="{{urlComprobante}}" class="cta-button primary">Descargar Comprobante</a>
+                <a href="{{urlPanelArtista}}" class="cta-button secondary">Ver Mi Panel</a>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <p style="color: #64748b; font-size: 15px; line-height: 1.6; text-align: center;">
+                <strong>¡Gracias por confiar en Backstage Música!</strong><br>
+                Seguimos trabajando para hacer más fácil la gestión de tus ganancias.
+            </p>
+        </div>
+        
+        <div class="footer">
+            <p class="footer-text">
+                Si no ves el dinero en tu cuenta después de 3 días hábiles,<br>
+                por favor contacta a nuestro equipo de soporte.
+            </p>
+            <p class="footer-text">
+                <strong>¡Felicidades por tu éxito!</strong><br>
+                <span class="company-name">El equipo de Backstage Música</span>
+            </p>
+        </div>
     </div>
 </body>
 </html>

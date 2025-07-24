@@ -266,7 +266,7 @@ try {
 const obtenerUltimosDigitos = (cuenta: any): string => {
   switch (cuenta.tipoCuenta?.toLowerCase()) {
     case 'paypal':
-      return cuenta.email_paypal ? `...${cuenta.email_paypal.slice(-8)}` : '****';  // ← Cambiar aquí
+      return cuenta.email_paypal ? `...${cuenta.emailPaypal.slice(-8)}` : '****';  // ← Cambiar aquí
     
     case 'nacional':
       return cuenta.clabe ? cuenta.clabe.slice(-4) : '****';
@@ -277,7 +277,7 @@ const obtenerUltimosDigitos = (cuenta: any): string => {
     default:
       if (cuenta.numeroCuenta) return String(cuenta.numeroCuenta).slice(-4);
       if (cuenta.clabe) return cuenta.clabe.slice(-4);
-      if (cuenta.email_paypal) return `...${cuenta.email_paypal.slice(-8)}`;  // ← Cambiar aquí
+      if (cuenta.emailPaypal) return `...${cuenta.emailPaypal.slice(-8)}`;  // ← Cambiar aquí
       return '****';
   }
 };
@@ -286,7 +286,7 @@ const obtenerUltimosDigitos = (cuenta: any): string => {
 const obtenerIdentificadorCuenta = (cuenta: any): string => {
   switch (cuenta.tipoCuenta?.toLowerCase()) {
     case 'paypal':
-      return cuenta.email_paypal || 'Email no disponible';  // ← Cambiar aquí
+      return cuenta.emailPaypal || 'Email no disponible';  // ← Cambiar aquí
     
     case 'nacional':
       return cuenta.clabe || 'CLABE no disponible';

@@ -4,19 +4,77 @@ import sgMail from '../sendgrid';
 import { renderTemplate, debugTemplate } from './templateEngine';
 import { formatearInfoCuenta, formatearCriterioAlerta } from './helpers' // ← AGREGAR ESTA IMPORTACIÓN
 
+/**
+ * Helper para obtener el label del tipo de cuenta
+ */
+function getTipoCuentaLabel(tipoCuenta: string): string {
+  switch (tipoCuenta?.toLowerCase()) {
+    case 'paypal': return 'PayPal';
+    case 'nacional': return 'Nacional (México)';
+    case 'internacional': return 'Internacional (USA)';
+    default: return 'Tipo no especificado';
+  }
+}
 
 /**
- * Envía un correo electrónico de confirmación de retiro a un artista.
+ * Envía un correo electrónico de confirmación de retiro a un artista. (NUEVA VERSIÓN)
  */
-export async function enviarConfirmacionRetiro(email: string, monto: string | number): Promise<void> {
-  const html = renderTemplate('confirmacion-retiro', { 
-    monto: typeof monto === 'number' ? monto.toLocaleString() : monto 
+export async function enviarConfirmacionRetiro(
+  email: string, 
+  data: any  // Acepta el objeto completo que le pasas desde la API
+): Promise<void> {
+  
+  console.log('🔍 [CONFIRMACION DEBUG] Función llamada con:', {
+    email,
+    tipoData: typeof data,
+    keys: Object.keys(data || {})
   });
+  
+  // Si data es solo un número (versión legacy), convertir
+  if (typeof data === 'number' || typeof data === 'string') {
+    console.log('🔄 [CONFIRMACION] Convirtiendo formato legacy');
+    data = {
+      monto: data,
+      solicitudId: `RET-${Date.now()}`,
+      nombreArtista: 'Artista',
+      fecha: new Date().toLocaleDateString('es-ES'),
+      nombreBanco: 'Banco pendiente',
+      tipoCuenta: 'Por configurar',
+      ultimosDigitos: '****',
+      identificadorCuenta: 'No disponible',
+      urlPanelArtista: `${process.env.NEXT_PUBLIC_BASE_URL}/artista/retiros`
+    };
+  }
+  
+  // Preparar datos completos para el template
+  const templateData = {
+    solicitudId: data.solicitudId || `RET-${Date.now()}`,
+    nombreArtista: data.nombreArtista || 'Artista',
+    monto: typeof data.monto === 'number' ? data.monto.toLocaleString('en-US') : data.monto,
+    fecha: data.fecha || new Date().toLocaleDateString('es-ES'),
+    nombreBanco: data.nombreBanco || 'Banco no especificado',
+    tipoCuenta: data.tipoCuenta || 'No especificado',
+    tipoCuentaLabel: getTipoCuentaLabel(data.tipoCuenta),
+    identificadorCuenta: data.identificadorCuenta || 'No disponible',
+    ultimosDigitos: data.ultimosDigitos || '****',
+    urlPanelArtista: data.urlPanelArtista || `${process.env.NEXT_PUBLIC_BASE_URL}/artista/retiros`
+  };
+  
+  console.log('🔍 [CONFIRMACION DEBUG] Template data preparado:', templateData);
+  
+  const html = renderTemplate('confirmacion-retiro', templateData);
+  
+  // Verificar que las variables se reemplazaron
+  if (html.includes('{{')) {
+    console.warn('⚠️ [TEMPLATE WARNING] Variables sin reemplazar en confirmacion-retiro:');
+    const unreplacedVars = html.match(/\{\{[^}]+\}\}/g);
+    console.log('Variables sin reemplazar:', unreplacedVars);
+  }
   
   const msg = {
     to: email,
     from: process.env.EMAIL_FROM!,
-    subject: 'Confirmación de solicitud de retiro',
+    subject: 'Backstage Pagos::: Confirmación de solicitud de retiro',
     html: html,
   };
 

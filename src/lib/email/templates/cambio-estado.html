@@ -3,57 +3,499 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Actualización de Estado</title>
+    <title>Actualización de tu Retiro - Backstage Música</title>
     <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: #007bff; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
-        .content { background: #f8f9fa; padding: 25px; border: 1px solid #dee2e6; }
-        .footer { background: #343a40; color: white; padding: 15px; text-align: center; border-radius: 0 0 8px 8px; }
-        .status-box { padding: 15px; border-radius: 5px; margin: 15px 0; text-align: center; font-weight: bold; }
-        .status-aprobado { background: #d1ecf1; color: #0c5460; }
-        .status-completado { background: #d4edda; color: #155724; }
-        .status-rechazado { background: #f8d7da; color: #721c24; }
-        .motivo { background: #fff3cd; color: #856404; padding: 10px; border-radius: 5px; margin: 10px 0; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #f7f7f7 0%, #f0f0f0 100%);
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(103, 98, 179, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(82, 124, 235, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(16, 207, 189, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(103, 98, 179, 0.1);
+            overflow: hidden;
+            border: 1px solid rgba(240, 240, 240, 0.8);
+            position: relative;
+        }
+        
+        .header {
+            padding: 40px 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header.aprobado {
+            background: linear-gradient(135deg, #10cfbd 0%, #48b0f7 100%);
+        }
+        
+        .header.rechazado {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: 
+                radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 70% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 40%);
+            animation: floatBackground 6s ease-in-out infinite;
+        }
+        
+        @keyframes floatBackground {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-10px) rotate(1deg); }
+        }
+        
+        .logo {
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 1;
+            opacity: 0.9;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50px;
+            padding: 8px 16px;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .status-text {
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .main-title {
+            color: white;
+            font-size: 28px;
+            font-weight: 600;
+            line-height: 1.2;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .subtitle {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 16px;
+            font-weight: 400;
+            line-height: 1.5;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .content {
+            padding: 40px 30px;
+            position: relative;
+        }
+        
+        .greeting {
+            font-size: 16px;
+            color: #374151;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        .update-card {
+            border-radius: 16px;
+            padding: 30px;
+            text-align: center;
+            margin: 30px 0;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+        
+        .update-card.aprobado {
+            background: linear-gradient(135deg, rgba(16, 207, 189, 0.1) 0%, rgba(72, 176, 247, 0.1) 100%);
+            border: 2px solid rgba(16, 207, 189, 0.2);
+        }
+        
+        .update-card.rechazado {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.1) 100%);
+            border: 2px solid rgba(239, 68, 68, 0.2);
+        }
+        
+        .update-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+        }
+        
+        .update-card.aprobado::before {
+            background: linear-gradient(135deg, #10cfbd 0%, #48b0f7 100%);
+        }
+        
+        .update-card.rechazado::before {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+        
+        .update-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+            display: block;
+        }
+        
+        .update-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .update-title.aprobado {
+            color: #10cfbd;
+        }
+        
+        .update-title.rechazado {
+            color: #ef4444;
+        }
+        
+        .update-description {
+            font-size: 16px;
+            font-weight: 500;
+            line-height: 1.5;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .update-description.aprobado {
+            color: #019fd2;
+        }
+        
+        .update-description.rechazado {
+            color: #dc2626;
+        }
+        
+        .details-card {
+            background: rgba(247, 247, 247, 0.7);
+            border: 2px solid rgba(103, 98, 179, 0.1);
+            border-radius: 16px;
+            padding: 30px;
+            margin: 30px 0;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+        
+        .details-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(135deg, #6762b3 0%, #527ceb 100%);
+        }
+        
+        .details-title {
+            color: #374151;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 25px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .detail-item {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 12px;
+            border: 1px solid rgba(103, 98, 179, 0.1);
+            position: relative;
+            z-index: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(5px);
+        }
+        
+        .detail-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .detail-label {
+            color: #6b7280;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .detail-value {
+            color: #1f2937;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .detail-value.monto {
+            color: #10cfbd;
+            font-size: 16px;
+            font-weight: 700;
+        }
+        
+        .reason-card {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.05) 0%, rgba(220, 38, 38, 0.05) 100%);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 12px;
+            padding: 25px;
+            margin: 30px 0;
+            backdrop-filter: blur(5px);
+        }
+        
+        .reason-title {
+            color: #dc2626;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .reason-text {
+            color: #ef4444;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .next-steps-card {
+            background: rgba(72, 176, 247, 0.05);
+            border: 1px solid rgba(72, 176, 247, 0.2);
+            border-radius: 12px;
+            padding: 25px;
+            margin: 30px 0;
+            backdrop-filter: blur(5px);
+        }
+        
+        .next-steps-title {
+            color: #019fd2;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        
+        .next-steps-text {
+            color: #6b7280;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #6762b3 0%, #527ceb 100%);
+            color: white;
+            text-decoration: none;
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 16px;
+            margin: 30px 0;
+            box-shadow: 0 8px 25px rgba(103, 98, 179, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .cta-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 35px rgba(103, 98, 179, 0.4);
+        }
+        
+        .cta-button:hover::before {
+            left: 100%;
+        }
+        
+        .footer {
+            background: rgba(247, 247, 247, 0.8);
+            padding: 30px;
+            text-align: center;
+            border-top: 1px solid rgba(240, 240, 240, 0.8);
+            backdrop-filter: blur(10px);
+        }
+        
+        .footer-text {
+            color: #64748b;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        
+        .company-name {
+            color: #6762b3;
+            font-weight: 600;
+        }
+        
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(103, 98, 179, 0.2), transparent);
+            margin: 30px 0;
+        }
+        
+        @media (max-width: 640px) {
+            body {
+                padding: 10px;
+            }
+            
+            .header {
+                padding: 30px 20px;
+            }
+            
+            .main-title {
+                font-size: 24px;
+            }
+            
+            .content {
+                padding: 30px 20px;
+            }
+            
+            .details-card, .update-card {
+                padding: 25px 20px;
+            }
+            
+            .footer {
+                padding: 25px 20px;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>📋 Actualización de Estado</h1>
-    </div>
-
-    <div class="content">
-        <p>Hola <strong>{{nombreCompleto}}</strong>,</p>
-        
-        {{#if mensaje}}
-            <p>{{mensaje}}</p>
-        {{else}}
-            <p>Tu solicitud de retiro por <strong>{{montoFormateado}}</strong> ha cambiado de estado:</p>
-            
-            <div class="status-box status-{{estado|lower}}">
-                Estado actual: <strong>{{estado|upper}}</strong>
+    <div class="email-container">
+        <div class="header {{estado}}">
+            <div class="logo">Backstage Música</div>
+            <div class="status-badge">
+                <span class="status-text">Actualización</span>
             </div>
-
-            {{#if motivo}}
-                <div class="motivo">
-                    <strong>Motivo:</strong> {{motivo}}
-                </div>
-            {{/if}}
-
-            {{#if estado === 'Aprobado'}}
-                <p>Tu solicitud ha sido aprobada y está siendo procesada. Te notificaremos cuando el pago sea completado.</p>
-            {{else if estado === 'Rechazado'}}
-                <p>Lamentamos informarte que tu solicitud no pudo ser procesada. Si tienes preguntas, contacta a soporte.</p>
-            {{else}}
-                <p>Te mantendremos informado de cualquier cambio adicional.</p>
-            {{/if}}
-        {{/if}}
+            <h1 class="main-title">Estado de tu Retiro</h1>
+            <p class="subtitle">Hemos actualizado el estado de tu solicitud</p>
+        </div>
         
-        <p>Gracias por usar nuestra plataforma.</p>
-    </div>
-
-    <div class="footer">
-        <p>Saludos cordiales,<br>
-        El equipo de <strong>Sistema de Pagos</strong></p>
+        <div class="content">
+            <p class="greeting">
+                <strong>Hola {{nombreCompleto}},</strong><br><br>
+                Te escribimos para informarte sobre una actualización importante en tu solicitud de retiro.
+            </p>
+            
+            <div class="update-card {{estado}}">
+                <span class="update-icon">{{#if (eq estado 'Aprobado')}}✅{{else}}❌{{/if}}</span>
+                <div class="update-title {{estado}}">
+                    {{#if (eq estado 'Aprobado')}}¡Tu Retiro ha sido Aprobado!{{else}}Retiro Rechazado{{/if}}
+                </div>
+                <div class="update-description {{estado}}">
+                    {{#if (eq estado 'Aprobado')}}Tu solicitud está ahora en proceso de transferencia{{else}}Tu solicitud no pudo ser procesada en este momento{{/if}}
+                </div>
+            </div>
+            
+            <div class="details-card">
+                <h3 class="details-title">Detalles de tu Solicitud</h3>
+                <div class="detail-item">
+                    <span class="detail-label">Estado</span>
+                    <span class="detail-value">{{estado}}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Monto</span>
+                    <span class="detail-value monto">{{montoFormateado}}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Fecha de Actualización</span>
+                    <span class="detail-value">{{fechaActualizacion}}</span>
+                </div>
+            </div>
+            
+            {{#if motivo}}
+            <div class="reason-card">
+                <div class="reason-title">Motivo</div>
+                <div class="reason-text">{{motivo}}</div>
+            </div>
+            {{/if}}
+            
+            <div class="next-steps-card">
+                <div class="next-steps-title">¿Qué sigue ahora?</div>
+                <div class="next-steps-text">
+                    {{#if (eq estado 'Aprobado')}}
+                    Tu retiro está siendo procesado por nuestro equipo financiero. Recibirás otra notificación cuando el pago haya sido completado. Esto generalmente toma de 3 a 5 días hábiles.
+                    {{else}}
+                    Puedes crear una nueva solicitud de retiro corrigiendo los aspectos mencionados en el motivo. Si tienes dudas, nuestro equipo de soporte está disponible para ayudarte.
+                    {{/if}}
+                </div>
+            </div>
+            
+            <div style="text-align: center;">
+                <a href="{{urlPanelArtista}}" class="cta-button">Ver Mi Panel</a>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <p style="color: #64748b; font-size: 15px; line-height: 1.6; text-align: center;">
+                <strong>¿Tienes preguntas?</strong><br>
+                Nuestro equipo de soporte está aquí para ayudarte con cualquier duda.
+            </p>
+        </div>
+        
+        <div class="footer">
+            <p class="footer-text">
+                Mantente al tanto de todas las actualizaciones<br>
+                desde tu panel de artista.
+            </p>
+            <p class="footer-text">
+                <strong>Saludos cordiales,</strong><br>
+                <span class="company-name">El equipo de Backstage Música</span>
+            </p>
+        </div>
     </div>
 </body>
 </html>
