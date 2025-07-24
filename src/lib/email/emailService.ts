@@ -245,7 +245,7 @@ export async function enviarActualizacionEstado(
     const msg = {
       to: email,
       from: process.env.EMAIL_FROM!,
-      subject: `Tu retiro de $${monto.toLocaleString()} ya está completado`,
+      subject: `Backstage Pagos::: Tu retiro se ha completado`,
       html: html,
     }
 
@@ -274,7 +274,7 @@ export async function enviarActualizacionEstado(
     const msg = {
       to: email,
       from: process.env.EMAIL_FROM!,
-      subject: `Actualización de tu retiro`,
+      subject: `Backstage Pagos::: Actualización de tu retiro`,
       html: html,
     }
 
