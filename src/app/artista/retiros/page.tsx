@@ -453,8 +453,7 @@ export default function RetirosPage() {
         { title: 'Pendientes', value: retiros.filter(r => r.estado === 'Pendiente').length.toString(), icon: Clock },
         { title: 'Procesando', value: retiros.filter(r => r.estado === 'Procesando').length.toString(), icon: Loader },
         { title: 'Completados', value: retiros.filter(r => r.estado === 'Completado').length.toString(), icon: CheckCircle },
-        { title: 'Total Retirado (USD)', value: `$${retiros.filter(r => r.estado === 'Completado').reduce((sum, r) => sum + r.montoSolicitado, 0).toLocaleString()}`, icon: DollarSign }
-    ];
+        { title: 'Total Retirado (USD)', value: `$${retiros.filter(r => r.estado === 'Completado').reduce((sum, r) => sum + Number(r.montoSolicitado), 0).toLocaleString()}`, icon: DollarSign }    ];
 
     const retirosFiltrados = retiros.filter(r => {
         if (filterType === 'activos') {
