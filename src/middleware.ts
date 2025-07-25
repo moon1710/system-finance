@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getIronSession } from 'iron-session'
 import { SessionData, sessionOptions } from './lib/session'
-import { isIpBlocked } from './lib/rate-limit' // Importar desde lib
+import { isIpBlocked } from './lib/rate-limit'
 
 // Configuración de seguridad
 const SECURITY_CONFIG = {
@@ -11,7 +11,7 @@ const SECURITY_CONFIG = {
   allowedOrigins: [process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'],
 }
 
-// Headers de seguridad estrictos
+// Headers de seguridad básicos
 const SECURITY_HEADERS = {
   'X-Frame-Options': 'DENY',
   'X-Content-Type-Options': 'nosniff',
@@ -24,18 +24,16 @@ const SECURITY_HEADERS = {
   'X-Permitted-Cross-Domain-Policies': 'none',
 }
 
-// Rutas públicas (mínimas necesarias)
+// 🔒 RUTAS PÚBLICAS
 const PUBLIC_ROUTES = [
-  '/',//temporal para desarrollo front
-  '/cambiar-password-inicial',//temporal para desarrollo front
   '/login',
+  '/cambiar-password-inicial',
   '/api/auth/login',
   '/api/auth/forgot-password',
   '/api/setup', // temporal para desarrollo
 ]
 
-// 🔧 RUTAS ESPECIALES QUE NO NECESITAN VALIDACIÓN DE ORIGEN
-// (Pero sí necesitan autenticación de sesión)
+// 🔧 RUTAS ESPECIALES
 const SPECIAL_API_ROUTES = [
   '/api/retiros/', // Para comprobantes
 ]
@@ -45,6 +43,12 @@ function getClientIp(request: NextRequest): string {
   const forwarded = request.headers.get('x-forwarded-for')
   const real = request.headers.get('x-real-ip')
   return forwarded?.split(',')[0] || real || 'unknown'
+}
+
+// 🛡️ PROTECCIÓN BÁSICA CONTRA CVE-2025-29927
+function hasSecurityThreat(request: NextRequest): boolean {
+  // Solo bloquear el header más peligroso
+  return request.headers.has('x-middleware-subrequest')
 }
 
 // Validar origen de la petición
@@ -58,9 +62,14 @@ function isValidOrigin(request: NextRequest): boolean {
   ) || (process.env.NODE_ENV !== 'production' && checkOrigin.includes('.devtunnels.ms'))
 }
 
-// 🔧 NUEVA FUNCIÓN: Verificar si es una ruta especial
+// Verificar si es una ruta especial
 function isSpecialApiRoute(pathname: string): boolean {
   return SPECIAL_API_ROUTES.some(route => pathname.includes(route))
+}
+
+// Obtener dashboard según rol
+function getDashboardUrl(rol: string): string {
+  return rol === 'admin' ? '/admin' : '/artista'
 }
 
 export async function middleware(request: NextRequest) {
@@ -71,6 +80,15 @@ export async function middleware(request: NextRequest) {
   console.log('URL:', pathname)
   console.log('Origin:', request.headers.get('origin'))
   console.log('Referer:', request.headers.get('referer'))
+  
+  // 🛡️ PROTECCIÓN BÁSICA: Solo bloquear ataques obvios
+  if (hasSecurityThreat(request)) {
+    console.warn(`🚨 Posible ataque detectado desde ${clientIp} a ${pathname}`)
+    return new NextResponse(
+      JSON.stringify({ error: 'Request bloqueado por seguridad' }),
+      { status: 403, headers: { 'Content-Type': 'application/json' } }
+    )
+  }
   
   // Crear response con headers de seguridad
   const response = NextResponse.next()
@@ -104,16 +122,39 @@ export async function middleware(request: NextRequest) {
     )
   }
 
-  // Verificar rutas públicas
+  // 🎯 MANEJO DE RUTA RAÍZ "/"
+  if (pathname === '/') {
+    try {
+      const session = await getIronSession<SessionData>(request, response, sessionOptions)
+      
+      if (session.isLoggedIn) {
+        // Usuario logueado -> Redirigir a su dashboard
+        const dashboardUrl = getDashboardUrl(session.rol)
+        console.log(`✅ Usuario logueado (${session.rol}) redirigido a: ${dashboardUrl}`)
+        return NextResponse.redirect(new URL(dashboardUrl, request.url))
+      } else {
+        // Usuario NO logueado -> Mostrar landing page
+        console.log('👤 Usuario no logueado, mostrando landing page')
+        return response // Permite acceso a la landing page
+      }
+    } catch (error) {
+      console.error('Error verificando sesión en ruta raíz:', error)
+      // En caso de error, mostrar landing page
+      return response
+    }
+  }
+
+  // 🔐 VERIFICAR RUTAS PÚBLICAS
   const isPublicRoute = PUBLIC_ROUTES.some(route => pathname === route)
   if (isPublicRoute) {
-    // Si está en login pero ya tiene sesión válida, redirigir
+    // Si está en login pero ya tiene sesión válida, redirigir a dashboard
     if (pathname === '/login') {
       try {
         const session = await getIronSession<SessionData>(request, response, sessionOptions)
         if (session.isLoggedIn) {
-          const redirectUrl = session.rol === 'admin' ? '/admin' : '/artista'
-          return NextResponse.redirect(new URL(redirectUrl, request.url))
+          const dashboardUrl = getDashboardUrl(session.rol)
+          console.log(`✅ Usuario ya logueado en /login, redirigido a: ${dashboardUrl}`)
+          return NextResponse.redirect(new URL(dashboardUrl, request.url))
         }
       } catch (error) {
         console.error('Error verificando sesión en login:', error)
@@ -122,7 +163,7 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
-  // Para rutas protegidas, verificar sesión
+  // 🛡️ PARA RUTAS PROTEGIDAS, VERIFICAR SESIÓN
   try {
     const session = await getIronSession<SessionData>(request, response, sessionOptions)
     
@@ -140,23 +181,26 @@ export async function middleware(request: NextRequest) {
 
     console.log('✅ Sesión válida:', { userId: session.userId, rol: session.rol })
 
-    // Verificar permisos por rol
+    // 🎯 VERIFICAR PERMISOS POR ROL
     if (pathname.startsWith('/admin')) {
       if (session.rol !== 'admin') {
-        console.warn(`❌ Acceso denegado: Usuario ${session.userId} intentó acceder a /admin`)
+        console.warn(`❌ Acceso denegado: Usuario ${session.userId} (${session.rol}) intentó acceder a /admin`)
         return NextResponse.redirect(new URL('/artista', request.url))
       }
     }
     
     if (pathname.startsWith('/artista')) {
       if (session.rol !== 'artista') {
+        console.warn(`❌ Acceso denegado: Usuario ${session.userId} (${session.rol}) intentó acceder a /artista`)
         return NextResponse.redirect(new URL('/admin', request.url))
       }
     }
 
-    // Agregar información de seguridad a los headers
-    response.headers.set('X-User-Id', session.userId)
-    response.headers.set('X-User-Role', session.rol)
+    // Agregar información de usuario a los headers (solo en desarrollo)
+    if (process.env.NODE_ENV !== 'production') {
+      response.headers.set('X-User-Id', session.userId)
+      response.headers.set('X-User-Role', session.rol)
+    }
     
     return response
 
