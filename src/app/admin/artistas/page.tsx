@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Search, X, CheckCircle, Clipboard, Loader, Users, ShieldCheck, ShieldOff, ChevronsRight, Filter, UserPlus } from 'lucide-react'
+import ArtistaQuickViewModal from '../components/ArtistaQuickViewModal' 
 
 // --- Interfaces ---
 interface Artista {
@@ -31,8 +32,7 @@ const getInitials = (name: string = ''): string => {
     return (names[0].charAt(0) + (names[names.length - 1].charAt(0) || '')).toUpperCase();
 };
 
-const ArtistaCard = ({ artista }: { artista: Artista }) => {
-    const router = useRouter();
+const ArtistaCard = ({ artista, onCardClick }: { artista: Artista, onCardClick: () => void }) => {
     const isActiva = artista.estadoCuenta === 'Activa';
 
     return (
@@ -43,13 +43,13 @@ const ArtistaCard = ({ artista }: { artista: Artista }) => {
             exit={{ opacity: 0, scale: 0.95 }}
             whileHover={{ y: -4, boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)' }}
             transition={{ duration: 0.2, ease: 'easeInOut' }}
-            className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden cursor-pointer"
-            onClick={() => router.push(`/admin/artistas/${artista.id}`)}
+            className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden cursor-pointer flex flex-col"
+            onClick={onCardClick} // Usa el callback
         >
-            <div className="p-5">
+            <div className="p-5 flex-grow">
                 <div className="flex items-center gap-4">
                     <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold ${isActiva ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-500'}`}>
-                        {getInitials(artista.nombreCompleto)}
+                        {artista.nombreCompleto.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
                     </div>
                     <div className="flex-1">
                         <h3 className="font-semibold text-slate-800 truncate">{artista.nombreCompleto}</h3>
@@ -68,7 +68,7 @@ const ArtistaCard = ({ artista }: { artista: Artista }) => {
                 </div>
             </div>
             <div className="bg-slate-50/70 group-hover:bg-slate-100 transition-colors px-5 py-2 text-xs font-medium text-slate-500 flex justify-between items-center">
-                <span>Ver Detalles</span>
+                <span>Acciones rápidas</span>
                 <ChevronsRight className="w-4 h-4 transition-transform transform group-hover:translate-x-1" />
             </div>
         </motion.div>
@@ -79,7 +79,7 @@ const ArtistaCard = ({ artista }: { artista: Artista }) => {
 export default function ArtistasPage() {
     const [artistas, setArtistas] = useState<Artista[]>([]);
     const [loading, setLoading] = useState(true);
-    const [showModal, setShowModal] = useState(false);
+    const [selectedArtistaId, setSelectedArtistaId] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('todos'); // 'todos', 'Activa', 'Inactiva'
     const router = useRouter();
@@ -117,6 +117,12 @@ export default function ArtistasPage() {
             );
     }, [artistas, searchTerm, filterStatus]);
 
+    // Función para manejar la actualización desde el modal
+    const handleModalUpdate = () => {
+        setSelectedArtistaId(null); // Cierra el modal
+        fetchArtistas(); // Vuelve a cargar los datos
+    };
+
     return (
         <div className="bg-slate-50 min-h-screen">
             <header className="bg-white/80 backdrop-blur-sm border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
@@ -129,7 +135,7 @@ export default function ArtistasPage() {
                         <Link href="/admin/usuarios/crear" passHref>
                             <span className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-sm hover:bg-blue-700 flex items-center gap-2 text-sm font-semibold">
                                 <UserPlus className="w-4 h-4" />
-                                Crear Artista
+                                Crear Usuario
                             </span>
                         </Link>
                     </motion.div>
@@ -171,7 +177,11 @@ export default function ArtistasPage() {
                 ) : filteredArtistas.length > 0 ? (
                     <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                         {filteredArtistas.map((artista) => (
-                            <ArtistaCard key={artista.id} artista={artista} />
+                            <ArtistaCard
+                                key={artista.id}
+                                artista={artista}
+                                onCardClick={() => setSelectedArtistaId(artista.id)}
+                            />
                         ))}
                     </motion.div>
                 ) : (
@@ -182,6 +192,11 @@ export default function ArtistasPage() {
                     </div>
                 )}
             </main>
+            <ArtistaQuickViewModal
+                artistaId={selectedArtistaId}
+                onClose={() => setSelectedArtistaId(null)}
+                onUpdate={handleModalUpdate}
+            />
         </div>
     );
 }
