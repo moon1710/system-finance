@@ -34,7 +34,7 @@ import type {
 // Configuración de email
 const EMAIL_CONFIG = {
   from: {
-    email: process.env.EMAIL_FROM || 'noreply@backstagemusica.com',
+    email: process.env.EMAIL_FROM || 'moncab.dev@gmail.com',
     name: process.env.EMAIL_FROM_NAME || 'Backstage Música'
   },
   baseUrl: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'

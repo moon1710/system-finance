@@ -48,3 +48,4 @@ next-env.d.ts
 /scripts
 /uploads
 /private_uploads
+../.vscode
