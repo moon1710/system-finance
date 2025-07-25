@@ -164,55 +164,57 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id:string } }
 ) {
   try {
-    const { id } = await params;  // ✅ Await params
-    
+    const { id } = params;
     const session = await getIronSession<SessionData>(request, new NextResponse(), sessionOptions);
 
     if (!session.isLoggedIn || !session.userId) {
       return NextResponse.json({ error: 'Usuario no autenticado' }, { status: 401 });
     }
 
-    if (session.rol !== 'artista') {
-      return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 });
-    }
-
-    // === VERIFICAR QUE LA CUENTA PERTENECE AL USUARIO ===
+    // 1. Verificar que la cuenta existe y pertenece al usuario.
     const cuentaExistente = await prisma.cuentaBancaria.findFirst({
       where: {
         id: id,
-        userId: session.userId
-      }
+        userId: session.userId,
+      },
     });
 
     if (!cuentaExistente) {
-      return NextResponse.json({
-        error: 'Cuenta bancaria no encontrada'
-      }, { status: 404 });
+      return NextResponse.json({ error: 'Cuenta bancaria no encontrada' }, { status: 404 });
     }
 
-    const resultado = await eliminarCuentaBancaria(id);
+    // 2. **NUEVA VALIDACIÓN**: Contar si existen retiros asociados a esta cuenta.
+    const historialRetiros = await prisma.retiro.count({
+      where: {
+        cuentaBancariaId: id,
+      },
+    });
 
-    if (!resultado.exito) {
+    // 3. Si hay historial (count > 0), bloquear el borrado.
+    if (historialRetiros > 0) {
       return NextResponse.json({
-        error: resultado.mensaje
-      }, { status: 400 });
+        error: 'Esta cuenta no puede ser eliminada porque tiene un historial de retiros asociado. Para mantener la integridad de los registros, las cuentas usadas no se pueden borrar.',
+      }, { status: 400 }); // 400 Bad Request es apropiado aquí.
     }
-
-    console.log('✅ [API] Cuenta eliminada exitosamente:', id);
+    
+    // 4. Si no hay historial, proceder con el borrado físico.
+    await prisma.cuentaBancaria.delete({
+      where: {
+        id: id,
+      },
+    });
 
     return NextResponse.json({
       success: true,
-      mensaje: resultado.mensaje
+      mensaje: 'Cuenta eliminada exitosamente.',
     });
 
   } catch (error) {
     console.error('❌ [API ERROR] Error en DELETE /api/cuentas/[id]:', error);
-    return NextResponse.json({
-      error: 'Error interno del servidor'
-    }, { status: 500 });
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }
 
