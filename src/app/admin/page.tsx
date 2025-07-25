@@ -72,6 +72,13 @@ export default function AdminDashboard() {
         // eslint-disable-next-line
     }, [user])
 
+    // Función para verificar si una fecha está en el mes actual
+    const isCurrentMonth = (dateString) => {
+        const date = new Date(dateString)
+        const now = new Date()
+        return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear()
+    }
+
     const fetchDashboardData = async () => {
         setLoadingStats(true)
         try {
@@ -79,22 +86,43 @@ export default function AdminDashboard() {
             if (retirosRes.ok) {
                 const retirosData = await retirosRes.json()
                 const retiros = retirosData.retiros || []
-                const pendientes = retiros.filter(r => r.estado === 'Pendiente').length
-                const completados = retiros.filter(r => r.estado === 'Completado').length
-                const montoPendiente = retiros.filter(r => r.estado === 'Pendiente').reduce((sum, r) => sum + parseFloat(r.montoSolicitado), 0)
-                const montoCompletado = retiros.filter(r => r.estado === 'Completado').reduce((sum, r) => sum + parseFloat(r.montoSolicitado), 0)
-                const alertas = retiros.filter(r => r.alertas && r.alertas.length > 0).length
 
+                // FILTRAR SOLO RETIROS DEL MES ACTUAL
+                const retirosDelMesActual = retiros.filter(retiro =>
+                    isCurrentMonth(retiro.fechaSolicitud)
+                )
+
+                // Calcular estadísticas solo del mes actual
+                const pendientes = retirosDelMesActual.filter(r => r.estado === 'Pendiente').length
+                const completados = retirosDelMesActual.filter(r => r.estado === 'Completado').length
+                const montoPendiente = retirosDelMesActual
+                    .filter(r => r.estado === 'Pendiente')
+                    .reduce((sum, r) => sum + parseFloat(r.montoSolicitado), 0)
+                const montoCompletado = retirosDelMesActual
+                    .filter(r => r.estado === 'Completado')
+                    .reduce((sum, r) => sum + parseFloat(r.montoSolicitado), 0)
+                const alertas = retirosDelMesActual
+                    .filter(r => r.alertas && r.alertas.length > 0).length
+
+                // Para usuarios, también puedes filtrar por fecha de creación si tienes ese campo
                 const usuariosRes = await fetch('/api/usuarios')
                 let totalArtistas = 0
                 if (usuariosRes.ok) {
                     const usuariosData = await usuariosRes.json()
-                    totalArtistas = usuariosData.usuarios?.filter(u => u.rol === 'artista').length 
+                    const usuarios = usuariosData.usuarios || []
+
+                    // Si quieres filtrar usuarios también por mes actual (opcional)
+                    // totalArtistas = usuarios.filter(u => 
+                    //     u.rol === 'artista' && isCurrentMonth(u.fechaCreacion)
+                    // ).length
+
+                    // O mantener el total general de artistas:
+                    totalArtistas = usuarios.filter(u => u.rol === 'artista').length
                 }
 
                 setStats({
                     totalArtistas,
-                    totalRetiros: retiros.length,
+                    totalRetiros: retirosDelMesActual.length, // Solo del mes actual
                     retirosPendientes: pendientes,
                     retirosCompletados: completados,
                     montoTotalPendiente: montoPendiente,
@@ -102,11 +130,11 @@ export default function AdminDashboard() {
                     alertasActivas: alertas
                 })
 
-                // Actividad reciente: usa tu API real en proyecto real
-                const activities: RecentActivity[] = [
-                    ...retiros.slice(0, 3).map(retiro => ({
+                // Actividad reciente del mes actual
+                const activities = [
+                    ...retirosDelMesActual.slice(0, 3).map(retiro => ({
                         id: retiro.id,
-                        tipo: 'retiro_solicitado' as const,
+                        tipo: 'retiro_solicitado',
                         mensaje: `Nuevo retiro de $${parseFloat(retiro.montoSolicitado).toLocaleString()}`,
                         fecha: retiro.fechaSolicitud,
                         usuario: retiro.usuario?.nombreCompleto
@@ -119,6 +147,15 @@ export default function AdminDashboard() {
         } finally {
             setLoadingStats(false)
         }
+    }
+
+    // También puedes agregar el nombre del mes actual en el header
+    const getCurrentMonthName = () => {
+        const months = [
+            'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+            'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+        ]
+        return months[new Date().getMonth()]
     }
 
     const handleLogout = async () => {
@@ -214,19 +251,6 @@ export default function AdminDashboard() {
 
                                 {/* Stats cards */}
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-                                    {/* Artistas */}
-                                    <motion.div
-                                        whileHover={{ y: -2, boxShadow: '0 8px 32px rgba(82,124,235,.12)' }}
-                                        transition={{ duration: 0.25 }}
-                                        className="bg-white/20 text-white rounded-xl p-4 border border-white/20"
-                                    >
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <Users size={18} className="text-[#527ceb]" />
-                                            <p className="text-blue-100 text-sm">Artistas</p>
-                                        </div>
-                                        <p className="text-3xl font-bold">{loadingStats ? '...' : stats.totalArtistas}</p>
-                                        <p className="text-blue-100 text-sm">Total registrados</p>
-                                    </motion.div>
 
                                     {/* Pendientes */}
                                     <motion.div
@@ -309,7 +333,9 @@ export default function AdminDashboard() {
                                 </div>
                                 <div>
                                     <h3 className="text-xl font-bold text-[#21252d]">Gestión Financiera</h3>
-                                    <p className="text-[#7c777a]">Resumen de transacciones</p>
+                                    <p className="text-blue-950 text-lg opacity-80">
+                                        Resumen de {getCurrentMonthName()} {new Date().getFullYear()}
+                                    </p>
                                 </div>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

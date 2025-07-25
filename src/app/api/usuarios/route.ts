@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
         estadoCuenta: true,
         createdAt: true,
         requiereCambioPassword: true,
+        rol: true,
         _count: {
           select: {
             retiros: true,
