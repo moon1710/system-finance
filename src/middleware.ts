@@ -154,18 +154,6 @@ export async function middleware(request: NextRequest) {
       }
     }
 
-    // 🔧 VERIFICACIÓN ESPECIAL PARA COMPROBANTES
-    if (pathname.includes('/api/retiros/') && pathname.includes('/comprobante')) {
-      if (session.rol !== 'admin') {
-        console.warn(`❌ Acceso denegado a comprobante: Usuario ${session.userId} no es admin`)
-        return new NextResponse(
-          JSON.stringify({ error: 'Solo administradores pueden ver comprobantes' }),
-          { status: 403, headers: { 'Content-Type': 'application/json' } }
-        )
-      }
-      console.log('✅ Acceso a comprobante autorizado para admin:', session.userId)
-    }
-
     // Agregar información de seguridad a los headers
     response.headers.set('X-User-Id', session.userId)
     response.headers.set('X-User-Role', session.rol)

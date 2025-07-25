@@ -405,25 +405,45 @@ export default function RetirosPage() {
 
     const descargarComprobante = async (retiroId: string) => {
         try {
-            const res = await fetch(`/api/retiros/${retiroId}/comprobante`)
+            const res = await fetch(`/api/retiros/${retiroId}/comprobante`);
+
             if (!res.ok) {
-                const error = await res.json()
-                alert(error.error || 'Error al descargar comprobante')
-                return
+                const error = await res.json();
+                alert(error.error || 'Error al descargar comprobante');
+                return;
             }
-            const blob = await res.blob()
-            const url = window.URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url
-            a.download = `comprobante_retiro_${retiroId}.pdf`
-            document.body.appendChild(a)
-            a.click()
-            window.URL.revokeObjectURL(url)
-            document.body.removeChild(a)
+
+            // 1. Obtener el header 'Content-Disposition' de la respuesta.
+            const contentDisposition = res.headers.get('Content-Disposition');
+            let nombreArchivo = `comprobante_retiro_${retiroId}`; // Fallback
+
+            // 2. Extraer el nombre del archivo con una expresión regular.
+            if (contentDisposition) {
+                const match = contentDisposition.match(/filename="([^"]+)"/);
+                if (match && match[1]) {
+                    nombreArchivo = match[1];
+                }
+            }
+
+            // 3. Crear el blob y la URL de objeto como antes.
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+
+            // 4. Usar el nombre de archivo extraído para la descarga.
+            a.download = nombreArchivo;
+
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
         } catch (error) {
-            alert('Error al descargar el comprobante')
+            console.error("Error en la descarga:", error);
+            alert('Un error inesperado ocurrió al intentar descargar el comprobante.');
         }
-    }
+    };
 
     const handleVerMotivo = (motivo: string) => {
         alert(`Motivo del rechazo:\n\n${motivo}`);

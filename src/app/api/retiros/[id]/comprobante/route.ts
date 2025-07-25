@@ -170,12 +170,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       }, { status: 401 })
     }
     
-    if (session.rol !== 'admin') {
-      return NextResponse.json({ 
-        error: 'Acceso denegado - Solo administradores',
-        debug: `Rol actual: ${session.rol}, requerido: admin`
-      }, { status: 403 })
-    }
 
     // Buscar retiro
     const retiro = await prisma.retiro.findUnique({
